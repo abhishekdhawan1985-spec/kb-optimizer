@@ -1,0 +1,16 @@
+{
+  "name": "kb-optimizer",
+  "version": "1.0.0",
+  "description": "KB Article Optimizer for Amazon Q - Vercel Serverless",
+  "main": "api/optimize.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": ["amazon-q", "knowledge-base", "optimization", "serverless"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0"
+  }
+}
