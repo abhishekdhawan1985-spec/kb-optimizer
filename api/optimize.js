@@ -1,7 +1,33 @@
-// api/optimize.js - Vercel Serverless Function
+// api/optimize.js - Vercel Serverless Function with NO HALLUCINATION
 // Place this file in: api/optimize.js
 
 const Anthropic = require('@anthropic-ai/sdk');
+
+// Function to convert Markdown to HTML
+function convertMarkdownToHTML(text) {
+  let html = text;
+  
+  // Convert headers (## Header) to bold HTML
+  html = html.replace(/^### (.*?)$/gm, '<strong>$1</strong>');
+  html = html.replace(/^## (.*?)$/gm, '<strong>$1</strong>');
+  html = html.replace(/^# (.*?)$/gm, '<strong>$1</strong>');
+  
+  // Convert bold (**text** or __text__) to HTML <strong>
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+  
+  // Convert italic (*text* or _text_) to HTML <em>
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+  
+  // Convert line breaks to <br>
+  html = html.replace(/\n/g, '<br>');
+  
+  // Clean up multiple <br> tags
+  html = html.replace(/(<br>){3,}/g, '<br><br>');
+  
+  return html;
+}
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -37,67 +63,122 @@ export default async function handler(req, res) {
         role: 'user',
         content: `You are a world-class expert at optimizing knowledge base articles for Amazon Q in Connect.
 
-**CRITICAL CONSTRAINT: Keep the article COMPACT and customer-friendly.**
-- Target length: Original ±20% (if original is 800 words, aim for 650-950 words)
-- Focus on QUALITY over QUANTITY
-- REPLACE weak text with strong text (don't just add)
-- REMOVE redundancy and fluff
-- ADD only critical elements
+**CRITICAL RULES - NEVER VIOLATE:**
 
-## COMPACT OPTIMIZATION FRAMEWORK (15 Core Techniques)
+🚫 **ABSOLUTE NO HALLUCINATION RULE:**
+- ONLY use information that EXISTS in the original article
+- NEVER add technical details not present in the source
+- NEVER add steps, procedures, or troubleshooting advice not in the original
+- NEVER add product names, features, or capabilities not mentioned
+- NEVER add numbers, percentages, or specifications not in the source
+- NEVER add links or references not in the original
+- If the original lacks detail, keep it vague - DO NOT invent specifics
+- When in doubt, use the EXACT wording from the original
 
-### TIER 1: STRUCTURE (No Length Impact)
-1. **Question-Format Title** - "Why Is My X Not Working?" instead of "X Troubleshooting"
-2. **Clear Hierarchy** - Use H2/H3 headings, numbered steps, bullet points
-3. **Front-Load Key Info** - Problem statement + time estimate at top
+✅ **WHAT YOU CAN DO:**
+- Reorganize existing information for better structure
+- Reword existing content for clarity (using original facts only)
+- Add formatting (headings, bullets, numbering)
+- Improve grammar and flow
+- Make question-format title from existing content
+- Add section headers to organize existing information
 
-### TIER 2: PRECISION LANGUAGE (Same or Less Length)
-4. **Specific vs Vague** - "Battery must be >25%" not "keep battery charged"
-5. **Active Voice** - "Remove battery" not "battery should be removed"
-6. **Imperative Commands** - "Check battery" not "you should check battery"
-7. **Remove Hedging** - Cut "might", "possibly", "perhaps", "try to"
-8. **Define Acronyms Inline** - "LED (status light)" not separate section
+❌ **WHAT YOU CANNOT DO:**
+- Add "Quick Checks" if steps aren't already in the article
+- Add time estimates if they're not mentioned
+- Add specific battery percentages if not in original
+- Add troubleshooting steps not present
+- Add expected results if not stated in original
+- Invent technical specifications
+- Add URLs or links not in the source
 
-### TIER 3: CRITICAL ADDITIONS (Minimal +150-200 words)
-9. **Quick Checks Section** - 3-5 items, 30 seconds each (60-100 words)
-10. **Expected Results** - 5-10 words after each major step
-11. **Time Estimates** - 2-5 words per step ("takes 2 minutes")
-12. **Success Indicator** - What "fixed" looks like (30-50 words at end)
-13. **Common Scenarios** - 3-5 shortcuts (80-120 words)
+---
 
-### TIER 4: REDUCTIONS (Cuts 100-150 words)
-14. **Remove Redundancy** - Say things once, clearly
-15. **Shorten Link Text** - "Related: [Title]" not "For more information, visit: [long URL description]"
+**OPTIMIZATION APPROACH:**
 
-## OUTPUT FORMAT
+**TIER 1: STRUCTURE (Safe - No New Info)**
+1. **Question-Format Title** - Convert existing title to "Why/How/What..." format
+2. **Clear Hierarchy** - Add H2/H3 headings to organize existing sections
+3. **Better Formatting** - Convert to numbered steps, bullet points
+
+**TIER 2: LANGUAGE IMPROVEMENT (Safe - Same Facts)**
+4. **Active Voice** - Rewrite passive sentences using same information
+5. **Imperative Commands** - Change "you should" to direct commands
+6. **Remove Hedging** - Cut unnecessary qualifiers while keeping facts accurate
+7. **Define Acronyms** - If acronym exists in source, add (definition) inline
+
+**TIER 3: MINIMAL ADDITIONS (Only if Source Supports)**
+8. **Quick Checks Section** - ONLY if article already contains these steps
+9. **Time Estimates** - ONLY if article mentions time or you can reasonably infer from "wait" or "restart"
+10. **Expected Results** - ONLY if article already describes outcomes
+11. **Group Related Content** - Organize existing information into sections
+
+**TIER 4: REDUCTIONS (Always Safe)**
+12. **Remove Redundancy** - Delete repeated information
+13. **Shorten Wordy Phrases** - "in order to" → "to"
+14. **Remove Fluff** - Cut unnecessary introductions and conclusions
+
+---
+
+**VERIFICATION CHECKLIST:**
+
+Before including ANY information, ask yourself:
+- ✅ Is this fact EXPLICITLY stated in the original?
+- ✅ Am I using the SAME technical details from the source?
+- ✅ If I'm adding clarity, am I using ONLY the original facts?
+- ❌ Am I inventing ANY steps, numbers, or procedures?
+- ❌ Am I assuming ANY technical details not stated?
+
+**When the original is vague, STAY VAGUE:**
+- Original: "Check the battery" → Keep as "Check the battery" (don't add percentages)
+- Original: "Restart the device" → Keep as "Restart the device" (don't add time estimates)
+- Original: "Try reconnecting" → Keep as "Try reconnecting" (don't add specific steps)
+
+**Only add specifics if they exist in the source:**
+- Original: "Battery should be above 25%" → You can say "Battery must be >25%"
+- Original: "Wait 2-3 minutes" → You can say "2-3 minutes"
+- Original: "Open Settings then WiFi" → You can format as steps
+
+---
+
+**TARGET LENGTH:**
+- Keep article COMPACT: Original ±20%
+- If original is 800 words, aim for 650-950 words
+- Focus on reorganizing and clarifying, not expanding
+
+---
+
+**OUTPUT FORMAT:**
 
 Provide TWO parts:
 
 **PART 1: COMPACT OPTIMIZED ARTICLE**
-- Question-format title
-- Brief problem statement (1-2 sentences)
-- Quick Checks section (60-100 words)
-- Main troubleshooting steps (streamlined)
-- Brief common scenarios (80-120 words)
-- Success indicator (30-50 words)
-- Short prevention tips (40-60 words)
-- Related articles (links only, no descriptions)
+- Question-format title (from original title)
+- Reorganized content with clear sections
+- Improved formatting and clarity
+- NO invented information
 
 **PART 2: ANALYSIS** (after "---ANALYSIS---" separator)
 - Original word count → Optimized word count
 - Percentage change
-- What was added (and word count)
-- What was removed (and word count)
+- What was reorganized
+- What was clarified
+- What was removed (redundancy)
 - Amazon Q scores (1-10):
   * Semantic Search Score
   * Content Clarity Score
-  * Customer Readiness Score
-  * Overall Compact Optimization Score
+  * Structural Organization Score
+  * Overall Optimization Score (with deduction for any hallucination)
 - Key improvements (3-5 bullet points)
+- **Hallucination Check:** "No information added beyond source" or list any concerns
 
-Now optimize this article following the COMPACT guidelines:
+---
+
+Now optimize this article following the NO HALLUCINATION rules:
 
 ${article}
+
+Remember: ONLY use information from the source. When in doubt, keep it vague.
 
 Format as:
 [COMPACT OPTIMIZED ARTICLE]
@@ -113,8 +194,11 @@ Format as:
       .join('\n');
 
     const parts = fullResponse.split('---ANALYSIS---');
-    const optimizedArticle = parts[0].trim();
+    let optimizedArticle = parts[0].trim();
     const analysis = parts[1] ? parts[1].trim() : 'Analysis not available';
+
+    // Convert Markdown to HTML for better display
+    optimizedArticle = convertMarkdownToHTML(optimizedArticle);
 
     res.status(200).json({
       success: true,
