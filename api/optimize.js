@@ -184,7 +184,7 @@ ${optimizedArticle}`;
 
       return res.status(200).json({
         success: true,
-        optimizedContent: optimizedArticle,
+        optimizedArticle: optimizedArticle,  // Changed from optimizedContent to optimizedArticle
         analysis,
         validation: {
           score: hallucinationScore,
