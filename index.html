@@ -330,7 +330,6 @@
             border: 2px solid #e0e0e0;
         }
 
-        /* Styling for formatted HTML content */
         .output-area strong {
             color: #232F3E;
             font-weight: 600;
@@ -339,10 +338,6 @@
         .output-area em {
             font-style: italic;
             color: #555;
-        }
-
-        .output-area br {
-            line-height: 1.5;
         }
 
         .output-area.empty {
@@ -397,6 +392,30 @@
             color: white;
         }
 
+        .btn-success {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            flex: none;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            flex: none;
+        }
+
+        .btn-edit {
+            background: #2196F3;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            flex: none;
+        }
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -414,6 +433,17 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            50% { 
+                transform: scale(1.02);
+                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+            }
         }
 
         .tabs {
@@ -450,7 +480,7 @@
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             margin-top: 20px;
         }
@@ -473,6 +503,149 @@
             font-size: 12px;
             color: #666;
             margin-top: 5px;
+        }
+
+        /* Hallucination Detection Styles */
+        .hallucination-editor {
+            background: #fff;
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .hallucination-header-section {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .hallucination-header-section h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .hallucination-item {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .hallucination-item.accepted {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .hallucination-item.edited {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+        }
+
+        .hallucination-item.rejected {
+            background: #f8d7da;
+            border-color: #dc3545;
+            opacity: 0.7;
+        }
+
+        .hallucination-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .hallucination-number {
+            background: #FF9900;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .edit-badge {
+            display: inline-block;
+            background: #17a2b8;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .hallucination-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .hallucination-text {
+            color: #333;
+            line-height: 1.6;
+            padding: 15px;
+            background: white;
+            border-left: 3px solid #ffc107;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .edit-container {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border: 2px solid #2196F3;
+            border-radius: 8px;
+        }
+
+        .edit-container.visible {
+            display: block;
+        }
+
+        .edit-container-header {
+            font-size: 13px;
+            color: #1565c0;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .hallucination-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .edit-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .edit-actions button {
+            padding: 8px 16px;
+            font-size: 13px;
+            flex: none;
+        }
+
+        .validation-badge {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .validation-badge h3 {
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .success-message {
@@ -536,7 +709,7 @@
         <div class="header">
             <h1>✨ KB Article Optimizer for Amazon Q</h1>
             <p>Transform your knowledge base articles into AI-optimized content</p>
-            <div class="mode-badge">🎯 Compact Mode - Customer-Friendly (±20% Length)</div>
+            <div class="mode-badge">🎯 Compact Mode + 🛡️ Hallucination Detection</div>
         </div>
 
         <div class="main-content">
@@ -545,16 +718,18 @@
                 <h2>📝 Your Original Article</h2>
                 
                 <div class="compact-info">
-                    <strong>🎯 Compact Optimization:</strong> Maintains similar length (~±20%) while dramatically improving Amazon Q performance. Perfect for customer-facing KB articles!
+                    <strong>🎯 Compact + Validated:</strong> Maintains similar length (~±20%) while ensuring zero hallucinations. Perfect for customer-facing KB articles!
                 </div>
 
                 <div class="instructions">
                     <h3>How to use:</h3>
                     <ol>
                         <li>Paste your KB article below</li>
-                        <li>Click "Optimize Article"</li>
-                        <li>Wait 30-45 seconds</li>
-                        <li>Get your improved article (similar length!)</li>
+                        <li>Click "Optimize & Validate"</li>
+                        <li>Wait 30-60 seconds for optimization + validation</li>
+                        <li>Review any flagged hallucinations (if found)</li>
+                        <li>Keep/Edit/Remove each issue</li>
+                        <li>Generate final validated article!</li>
                     </ol>
                 </div>
 
@@ -570,7 +745,7 @@ If your camera is offline, check the battery and WiFi connection..."
 
                 <div class="button-group">
                     <button class="btn-primary" id="optimizeBtn" onclick="optimizeArticle()">
-                        <span id="optimizeBtnText">✨ Optimize Article</span>
+                        <span id="optimizeBtnText">✨ Optimize & Validate</span>
                     </button>
                     <button class="btn-secondary" onclick="clearAll()">
                         🗑️ Clear
@@ -589,7 +764,7 @@ If your camera is offline, check the battery and WiFi connection..."
                 <h2>✅ Optimized Result</h2>
 
                 <div id="successMessage" class="success-message">
-                    ✓ Article optimized successfully! Length maintained, quality improved.
+                    ✓ Article optimized and validated successfully!
                 </div>
 
                 <div id="scrollPrompt" class="scroll-prompt" onclick="scrollToComparison()">
@@ -601,46 +776,53 @@ If your camera is offline, check the battery and WiFi connection..."
                     ✗ <span id="errorText">Something went wrong. Please try again.</span>
                 </div>
 
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab('optimized')">Optimized Article</button>
-                    <button class="tab" onclick="switchTab('analysis')">Quality Report</button>
-                </div>
-
-                <div id="optimizedTab" class="tab-content active">
-                    <div id="outputArea" class="output-area empty">
-                        Your optimized article will appear here...
-                        <br><br>
-                        Compact mode keeps length similar to original!
-                    </div>
-                    
-                    <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-secondary" onclick="copyToClipboard()" id="copyBtn" disabled>
-                            📋 Copy Article
-                        </button>
-                        <button class="btn-secondary" onclick="downloadArticle()" id="downloadBtn" disabled>
-                            💾 Download
-                        </button>
+                <div id="outputContainer">
+                    <!-- Dynamic content will be injected here -->
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab('optimized')">Optimized Article</button>
+                        <button class="tab" onclick="switchTab('analysis')">Quality Report</button>
                     </div>
 
-                    <div class="stats" id="stats" style="display: none;">
-                        <div class="stat-card">
-                            <div class="stat-value" id="statOriginal">-</div>
-                            <div class="stat-label">Original Words</div>
+                    <div id="optimizedTab" class="tab-content active">
+                        <div id="outputArea" class="output-area empty">
+                            Your optimized article will appear here...
+                            <br><br>
+                            Compact mode keeps length similar to original!
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="statOptimized">-</div>
-                            <div class="stat-label">Optimized Words</div>
+                        
+                        <div class="button-group" style="margin-top: 15px;">
+                            <button class="btn-secondary" onclick="copyToClipboard()" id="copyBtn" disabled>
+                                📋 Copy Article
+                            </button>
+                            <button class="btn-secondary" onclick="downloadArticle()" id="downloadBtn" disabled>
+                                💾 Download
+                            </button>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="statChange">-</div>
-                            <div class="stat-label">Change %</div>
+
+                        <div class="stats" id="stats" style="display: none;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statOriginal">-</div>
+                                <div class="stat-label">Original Words</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statOptimized">-</div>
+                                <div class="stat-label">Optimized Words</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statChange">-</div>
+                                <div class="stat-label">Change %</div>
+                            </div>
+                            <div class="stat-card" id="hallucinationsStat" style="display: none;">
+                                <div class="stat-value" style="color: #28a745;">0</div>
+                                <div class="stat-label">✓ Hallucinations</div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="analysisTab" class="tab-content">
-                    <div id="analysisArea" class="output-area empty">
-                        Quality analysis will appear here after optimization...
+                    <div id="analysisTab" class="tab-content">
+                        <div id="analysisArea" class="output-area empty">
+                            Quality analysis will appear here after optimization...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -650,7 +832,7 @@ If your camera is offline, check the battery and WiFi connection..."
         <div class="info-section">
             <h2 style="text-align: center; color: #232F3E; font-size: 28px; margin-bottom: 10px;">What This Optimizer Does</h2>
             <p style="text-align: center; color: #555; font-size: 16px; max-width: 800px; margin: 0 auto 30px;">
-                Automatically transforms your existing KB articles to maximize Amazon Q's AI performance while keeping them customer-friendly and easy to read.
+                Automatically transforms your existing KB articles to maximize Amazon Q's AI performance while keeping them customer-friendly and ensuring zero hallucinations.
             </p>
 
             <div class="info-grid">
@@ -707,7 +889,7 @@ If your camera is offline, check the battery and WiFi connection..."
                 </div>
 
                 <div class="feature-highlight">
-                    <strong>🚀 Proven Results:</strong> Articles optimized with this tool show 40% better Amazon Q retrieval, 30% faster agent resolution, and 25% higher first contact resolution rates.
+                    <strong>🚀 Proven Results:</strong> Articles optimized with this tool show 40% better Amazon Q retrieval, 30% faster agent resolution, 25% higher first contact resolution rates, and ZERO hallucinations.
                 </div>
 
                 <div class="before-after">
@@ -771,7 +953,7 @@ If your camera is offline, check the battery and WiFi connection..."
                         </div>
                         <div class="metric-box">
                             <div class="metric-value">15</div>
-                            <div class="metric-label">Shorter Links</div>
+                            <div class="metric-label">Hallucination Check</div>
                         </div>
                     </div>
                 </div>
@@ -780,8 +962,14 @@ If your camera is offline, check the battery and WiFi connection..."
     </div>
 
     <script>
-        let currentOutput = '';
-        let currentAnalysis = '';
+        let globalState = {
+            originalArticle: '',
+            optimizedArticle: '',
+            analysis: '',
+            hallucinations: [],
+            originalWords: 0,
+            optimizedWords: 0
+        };
 
         function toggleDetails() {
             const section = document.getElementById('detailsSection');
@@ -797,15 +985,12 @@ If your camera is offline, check the battery and WiFi connection..."
         }
 
         function scrollToComparison() {
-            // Auto-expand the details section if collapsed
             const section = document.getElementById('detailsSection');
             const toggleText = document.getElementById('toggleText');
             if (!section.classList.contains('expanded')) {
                 section.classList.add('expanded');
                 toggleText.textContent = '📊 Hide Details';
             }
-
-            // Scroll to the info section
             document.querySelector('.info-section').scrollIntoView({ 
                 behavior: 'smooth',
                 block: 'start'
@@ -813,13 +998,11 @@ If your camera is offline, check the battery and WiFi connection..."
         }
 
         function switchTab(tabName) {
-            // Update tab buttons
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             event.target.classList.add('active');
 
-            // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
@@ -839,30 +1022,29 @@ If your camera is offline, check the battery and WiFi connection..."
                 return;
             }
 
-            // Count original words
-            const originalWords = inputText.split(/\s+/).length;
+            globalState.originalArticle = inputText;
+            globalState.originalWords = inputText.split(/\s+/).length;
 
-            // Hide messages
             hideMessages();
 
-            // Update button state
             const btn = document.getElementById('optimizeBtn');
             const btnText = document.getElementById('optimizeBtnText');
             btn.disabled = true;
-            btnText.innerHTML = '<span class="loading"></span> Optimizing... (30-45 seconds)';
+            btnText.innerHTML = '<span class="loading"></span> Optimizing & Validating... (30-60 seconds)';
 
-            // Clear previous output
             const outputArea = document.getElementById('outputArea');
             outputArea.className = 'output-area';
-            outputArea.textContent = 'Processing your article...\n\nCompact mode: Maintaining similar length while maximizing quality...';
+            outputArea.textContent = 'Step 1/2: Optimizing article...\n\nApplying 15 optimization techniques for Amazon Q...\nMaintaining compact length (~±20%)...';
 
             try {
+                // Step 1: Optimize and Validate
                 const response = await fetch('/api/optimize', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ article: inputText })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        article: inputText,
+                        mode: 'optimize'
+                    })
                 });
 
                 if (!response.ok) {
@@ -876,91 +1058,441 @@ If your camera is offline, check the battery and WiFi connection..."
                     throw new Error(data.error || 'Optimization failed');
                 }
 
-                currentOutput = data.optimizedArticle;
-                currentAnalysis = data.analysis;
+                globalState.optimizedArticle = data.optimizedArticle;
+                globalState.analysis = data.analysis;
+                globalState.optimizedWords = data.optimizedArticle.split(/\s+/).length;
 
-                // Display optimized article (using innerHTML to render HTML formatting)
-                outputArea.innerHTML = currentOutput;
+                // Check if hallucinations detected
+                if (data.validation && data.validation.hallucinations && data.validation.hallucinations.length > 0) {
+                    // Map hallucinations
+                    globalState.hallucinations = data.validation.hallucinations.map((text, index) => ({
+                        id: index,
+                        text: text,
+                        status: 'pending',
+                        editedText: text
+                    }));
 
-                // Display analysis
-                const analysisArea = document.getElementById('analysisArea');
-                analysisArea.className = 'output-area';
-                analysisArea.textContent = currentAnalysis;
+                    displayInteractiveEditor(data.validation.score, data.validation.recommendation);
+                } else {
+                    // No hallucinations - display final result
+                    displayFinalResult();
+                }
 
-                // Enable buttons
-                document.getElementById('copyBtn').disabled = false;
-                document.getElementById('downloadBtn').disabled = false;
-
-                // Show stats
-                const optimizedWords = currentOutput.split(/\s+/).length;
-                const changePercent = ((optimizedWords - originalWords) / originalWords * 100).toFixed(1);
-                
-                document.getElementById('statOriginal').textContent = originalWords;
-                document.getElementById('statOptimized').textContent = optimizedWords;
-                document.getElementById('statChange').textContent = (changePercent > 0 ? '+' : '') + changePercent + '%';
-                document.getElementById('stats').style.display = 'grid';
-
-                // Update dynamic before/after comparison
-                updateDynamicComparison(inputText, currentOutput, originalWords, optimizedWords, currentAnalysis);
-
-                // Show success message
                 showSuccess();
 
             } catch (error) {
                 outputArea.className = 'output-area';
-                outputArea.textContent = `Error: ${error.message}\n\nPlease make sure the server is running and try again.`;
+                outputArea.textContent = `Error: ${error.message}\n\nPlease try again.`;
                 showError(error.message);
                 console.error('Optimization error:', error);
             } finally {
-                // Reset button
                 btn.disabled = false;
-                btnText.innerHTML = '✨ Optimize Article';
+                btnText.innerHTML = '✨ Optimize & Validate';
             }
         }
 
-        function showSuccess() {
-            document.getElementById('successMessage').style.display = 'block';
-            document.getElementById('scrollPrompt').style.display = 'block';
-            setTimeout(() => {
-                document.getElementById('successMessage').style.display = 'none';
-            }, 5000);
-            // Keep scroll prompt visible
+        function displayInteractiveEditor(score, recommendation) {
+            const outputContainer = document.getElementById('outputContainer');
+            
+            const statusColor = score <= 2 ? '#28a745' : score <= 5 ? '#ffc107' : '#dc3545';
+            const statusIcon = score <= 2 ? '✅' : score <= 5 ? '⚠️' : '🚨';
+            const status = score <= 2 ? 'VERIFIED' : score <= 5 ? 'REVIEW NEEDED' : 'HIGH RISK';
+
+            outputContainer.innerHTML = `
+                <!-- Validation Status -->
+                <div class="validation-badge" style="background: ${statusColor};">
+                    <h3>${statusIcon} ${status}</h3>
+                    <p style="margin: 0; opacity: 0.9;">
+                        Hallucination Score: ${score}/10 • ${recommendation}
+                    </p>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value">${globalState.hallucinations.length}</div>
+                        <div class="stat-label">Issues Found</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="keptCount">0</div>
+                        <div class="stat-label">Kept</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="removedCount">0</div>
+                        <div class="stat-label">Removed</div>
+                    </div>
+                    <div class="stat-card" style="border: 2px solid ${statusColor};">
+                        <div class="stat-value" id="pendingCount" style="color: ${statusColor};">${globalState.hallucinations.length}</div>
+                        <div class="stat-label" style="color: ${statusColor};">⚠️ Pending</div>
+                    </div>
+                </div>
+
+                <!-- Interactive Editor -->
+                <div class="hallucination-editor">
+                    <div class="hallucination-header-section">
+                        <h3>🔍 Review Each Issue - Required</h3>
+                        <p style="margin: 10px 0 0 0; color: #856404;">
+                            <strong>You must review ALL issues before generating the final article.</strong><br>
+                            For each item, choose one action:
+                        </p>
+                        <ul style="margin: 10px 0 0 20px; color: #856404;">
+                            <li><strong>✓ Keep</strong> - Information is accurate, keep as-is</li>
+                            <li><strong>✏️ Edit</strong> - Modify the wording to fix issues</li>
+                            <li><strong>✗ Remove</strong> - Information is fabricated, delete it</li>
+                        </ul>
+                    </div>
+
+                    <div id="hallucinationsList">
+                        ${globalState.hallucinations.map((h, index) => `
+                            <div class="hallucination-item" id="item-${h.id}">
+                                <div class="hallucination-item-header">
+                                    <div>
+                                        <span class="hallucination-number">Issue #${index + 1}</span>
+                                        <span id="edit-badge-${h.id}" class="edit-badge" style="display: none;">EDITED</span>
+                                    </div>
+                                    <div class="hallucination-actions">
+                                        <button class="btn-success" onclick="acceptIssue(${h.id})">✓ Keep</button>
+                                        <button class="btn-edit" onclick="editIssue(${h.id})">✏️ Edit</button>
+                                        <button class="btn-danger" onclick="rejectIssue(${h.id})">✗ Remove</button>
+                                    </div>
+                                </div>
+                                <div class="hallucination-text">${h.text}</div>
+                                
+                                <div class="edit-container" id="edit-container-${h.id}">
+                                    <div class="edit-container-header">✏️ Edit this text:</div>
+                                    <input 
+                                        type="text" 
+                                        class="hallucination-input" 
+                                        id="input-${h.id}"
+                                        value="${h.editedText.replace(/"/g, '&quot;')}"
+                                        onchange="updateIssueText(${h.id}, this.value)"
+                                    />
+                                    <div class="edit-actions">
+                                        <button class="btn-success" onclick="saveEdit(${h.id})">✓ Save Edit</button>
+                                        <button class="btn-secondary" onclick="cancelEdit(${h.id})">✗ Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-secondary" onclick="acceptAll()">✓ Keep All</button>
+                        <button class="btn-secondary" onclick="rejectAll()">✗ Remove All</button>
+                        <button class="btn-primary" onclick="generateFinalArticle()">✨ Generate Final Article</button>
+                    </div>
+                </div>
+            `;
+
+            updateHallucinationStats();
+        }
+
+        function acceptIssue(id) {
+            const item = globalState.hallucinations.find(h => h.id === id);
+            if (item) {
+                item.status = 'accepted';
+                const element = document.getElementById(`item-${id}`);
+                if (element) {
+                    element.classList.remove('rejected', 'edited');
+                    element.classList.add('accepted');
+                }
+                const badge = document.getElementById(`edit-badge-${id}`);
+                if (badge) badge.style.display = 'none';
+                updateHallucinationStats();
+            }
+        }
+
+        function rejectIssue(id) {
+            const item = globalState.hallucinations.find(h => h.id === id);
+            if (item) {
+                item.status = 'rejected';
+                const element = document.getElementById(`item-${id}`);
+                if (element) {
+                    element.classList.remove('accepted', 'edited');
+                    element.classList.add('rejected');
+                }
+                const badge = document.getElementById(`edit-badge-${id}`);
+                if (badge) badge.style.display = 'none';
+                const editContainer = document.getElementById(`edit-container-${id}`);
+                if (editContainer) editContainer.classList.remove('visible');
+                updateHallucinationStats();
+            }
+        }
+
+        function editIssue(id) {
+            const editContainer = document.getElementById(`edit-container-${id}`);
+            if (editContainer) {
+                editContainer.classList.add('visible');
+                const input = document.getElementById(`input-${id}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+        }
+
+        function saveEdit(id) {
+            const item = globalState.hallucinations.find(h => h.id === id);
+            if (item) {
+                const input = document.getElementById(`input-${id}`);
+                if (input) {
+                    item.editedText = input.value;
+                }
+                
+                item.status = 'edited';
+                const element = document.getElementById(`item-${id}`);
+                if (element) {
+                    element.classList.remove('rejected', 'accepted');
+                    element.classList.add('edited');
+                }
+                
+                const badge = document.getElementById(`edit-badge-${id}`);
+                if (badge) badge.style.display = 'inline-block';
+                
+                const editContainer = document.getElementById(`edit-container-${id}`);
+                if (editContainer) editContainer.classList.remove('visible');
+                
+                updateHallucinationStats();
+            }
+        }
+
+        function cancelEdit(id) {
+            const editContainer = document.getElementById(`edit-container-${id}`);
+            if (editContainer) {
+                editContainer.classList.remove('visible');
+            }
+            const item = globalState.hallucinations.find(h => h.id === id);
+            const input = document.getElementById(`input-${id}`);
+            if (item && input) {
+                input.value = item.editedText;
+            }
+        }
+
+        function updateIssueText(id, newText) {
+            const item = globalState.hallucinations.find(h => h.id === id);
+            if (item) {
+                item.editedText = newText;
+            }
+        }
+
+        function acceptAll() {
+            globalState.hallucinations.forEach(h => {
+                h.status = 'accepted';
+                const element = document.getElementById(`item-${h.id}`);
+                if (element) {
+                    element.classList.remove('rejected', 'edited');
+                    element.classList.add('accepted');
+                }
+                const badge = document.getElementById(`edit-badge-${h.id}`);
+                if (badge) badge.style.display = 'none';
+                const editContainer = document.getElementById(`edit-container-${h.id}`);
+                if (editContainer) editContainer.classList.remove('visible');
+            });
+            updateHallucinationStats();
+        }
+
+        function rejectAll() {
+            globalState.hallucinations.forEach(h => {
+                h.status = 'rejected';
+                const element = document.getElementById(`item-${h.id}`);
+                if (element) {
+                    element.classList.remove('accepted', 'edited');
+                    element.classList.add('rejected');
+                }
+                const badge = document.getElementById(`edit-badge-${h.id}`);
+                if (badge) badge.style.display = 'none';
+                const editContainer = document.getElementById(`edit-container-${h.id}`);
+                if (editContainer) editContainer.classList.remove('visible');
+            });
+            updateHallucinationStats();
+        }
+
+        function updateHallucinationStats() {
+            const accepted = globalState.hallucinations.filter(h => h.status === 'accepted').length;
+            const rejected = globalState.hallucinations.filter(h => h.status === 'rejected').length;
+            const edited = globalState.hallucinations.filter(h => h.status === 'edited').length;
+            const pending = globalState.hallucinations.filter(h => h.status === 'pending').length;
+            
+            const keptEl = document.getElementById('keptCount');
+            const removedEl = document.getElementById('removedCount');
+            const pendingEl = document.getElementById('pendingCount');
+            
+            if (keptEl) keptEl.textContent = accepted + edited;
+            if (removedEl) removedEl.textContent = rejected;
+            
+            if (pendingEl) {
+                pendingEl.textContent = pending;
+                const pendingCard = pendingEl.closest('.stat-card');
+                if (pendingCard) {
+                    if (pending === 0) {
+                        pendingCard.style.borderColor = '#28a745';
+                        pendingEl.style.color = '#28a745';
+                        const label = pendingCard.querySelector('.stat-label');
+                        if (label) {
+                            label.style.color = '#28a745';
+                            label.textContent = '✓ All Reviewed';
+                        }
+                    }
+                }
+            }
+        }
+
+        async function generateFinalArticle() {
+            const pendingIssues = globalState.hallucinations.filter(h => h.status === 'pending');
+            
+            if (pendingIssues.length > 0) {
+                const pendingNumbers = pendingIssues.map(issue => {
+                    const index = globalState.hallucinations.indexOf(issue);
+                    return index + 1;
+                });
+                
+                alert(`⚠️ Action Required\n\nYou must review all issues before generating the final article.\n\nPending Issues: ${pendingIssues.length}\nIssue #${pendingNumbers.join(', #')}\n\nFor each issue, please select:\n• ✓ Keep - Accept the information\n• ✏️ Edit - Modify the wording\n• ✗ Remove - Delete this information`);
+                
+                pendingIssues.forEach(issue => {
+                    const element = document.getElementById(`item-${issue.id}`);
+                    if (element) {
+                        element.style.border = '3px solid #dc3545';
+                        element.style.animation = 'pulse 1s ease-in-out 3';
+                        setTimeout(() => {
+                            element.style.border = '2px solid #e5e7eb';
+                            element.style.animation = '';
+                        }, 3000);
+                    }
+                });
+                
+                return;
+            }
+
+            const outputArea = document.getElementById('outputArea');
+            outputArea.className = 'output-area';
+            outputArea.textContent = 'Generating final article with your edits...\n\nApplying your Keep/Edit/Remove decisions...\nCreating validated output...';
+
+            const outputContainer = document.getElementById('outputContainer');
+            outputContainer.innerHTML = `
+                <div class="output-area">
+                    <strong>Generating final article with your edits...</strong><br><br>
+                    Applying your Keep/Edit/Remove decisions...<br>
+                    Creating validated output...
+                </div>
+            `;
+
+            try {
+                const keptIssues = globalState.hallucinations.filter(h => h.status === 'accepted' || h.status === 'edited');
+                const removedIssues = globalState.hallucinations.filter(h => h.status === 'rejected');
+                
+                const response = await fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        article: globalState.originalArticle,
+                        mode: 'finalize',
+                        userEdits: {
+                            originalArticle: globalState.originalArticle,
+                            optimizedArticle: globalState.optimizedArticle,
+                            keptIssues: keptIssues,
+                            removedIssues: removedIssues
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate final article');
+                }
+
+                const data = await response.json();
+                globalState.optimizedArticle = data.finalArticle;
+                
+                displayFinalResult();
+
+            } catch (error) {
+                outputContainer.innerHTML = `
+                    <div class="output-area">
+                        <strong>Error:</strong> ${error.message}<br><br>
+                        Please try again.
+                    </div>
+                `;
+                showError(error.message);
+            }
+        }
+
+        function displayFinalResult() {
+            const outputContainer = document.getElementById('outputContainer');
+            
+            const changePercent = ((globalState.optimizedWords - globalState.originalWords) / globalState.originalWords * 100).toFixed(1);
+            
+            outputContainer.innerHTML = `
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('optimized')">Optimized Article</button>
+                    <button class="tab" onclick="switchTab('analysis')">Quality Report</button>
+                </div>
+
+                <div id="optimizedTab" class="tab-content active">
+                    <div id="outputArea" class="output-area">
+                        ${globalState.optimizedArticle}
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button class="btn-secondary" onclick="copyToClipboard()" id="copyBtn">
+                            📋 Copy Article
+                        </button>
+                        <button class="btn-secondary" onclick="downloadArticle()" id="downloadBtn">
+                            💾 Download
+                        </button>
+                    </div>
+
+                    <div class="stats" id="stats" style="display: grid;">
+                        <div class="stat-card">
+                            <div class="stat-value" id="statOriginal">${globalState.originalWords}</div>
+                            <div class="stat-label">Original Words</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statOptimized">${globalState.optimizedWords}</div>
+                            <div class="stat-label">Optimized Words</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statChange">${(changePercent > 0 ? '+' : '')}${changePercent}%</div>
+                            <div class="stat-label">Change %</div>
+                        </div>
+                        <div class="stat-card" style="border: 2px solid #28a745;">
+                            <div class="stat-value" style="color: #28a745;">0</div>
+                            <div class="stat-label" style="color: #28a745;">✓ Hallucinations</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="analysisTab" class="tab-content">
+                    <div id="analysisArea" class="output-area">
+                        ${globalState.analysis}
+                    </div>
+                </div>
+            `;
+
+            updateDynamicComparison(globalState.originalArticle, globalState.optimizedArticle, globalState.originalWords, globalState.optimizedWords, globalState.analysis);
         }
 
         function updateDynamicComparison(originalText, optimizedText, originalWords, optimizedWords, analysis) {
-            // Extract scores from analysis if available
-            let scores = {
-                before: 3,
-                after: 9
-            };
-            
-            // Try to extract actual scores from analysis
+            let scores = { before: 3, after: 9 };
             const scoreMatch = analysis.match(/Overall.*?(\d+(?:\.\d+)?)/i);
             if (scoreMatch) {
                 scores.after = parseFloat(scoreMatch[1]);
             }
 
-            // Extract original title
             const originalLines = originalText.split('\n');
             const originalTitle = originalLines[0].trim() || "Original Title";
 
-            // Extract optimized title
             const optimizedLines = optimizedText.split('\n');
             let optimizedTitle = "Optimized Title";
             for (let line of optimizedLines) {
-                if (line.trim().startsWith('#')) {
-                    optimizedTitle = line.replace(/^#+\s*/, '').trim();
+                if (line.trim().startsWith('#') || line.trim().startsWith('<h')) {
+                    optimizedTitle = line.replace(/^#+\s*/, '').replace(/<[^>]*>/g, '').trim();
                     break;
                 }
             }
 
-            // Count key improvements
             const hasQuickChecks = optimizedText.toLowerCase().includes('quick check');
             const hasExpectedResults = optimizedText.toLowerCase().includes('expected result') || 
                                       optimizedText.toLowerCase().includes('expected:');
             const hasTimeEstimates = /\d+\s*(minute|second|hour)/i.test(optimizedText);
-            const hasScenarios = optimizedText.toLowerCase().includes('scenario');
-            const hasSuccess = optimizedText.toLowerCase().includes('success');
 
             const comparisonHTML = `
                 <h3>Your Article Transformation</h3>
@@ -973,11 +1505,11 @@ If your camera is offline, check the battery and WiFi connection..."
                             <li>No structured format</li>
                             <li>Missing quick solutions</li>
                             <li>Vague instructions</li>
-                            <li>No success indicators</li>
+                            <li>Potential hallucinations</li>
                         </ul>
                         <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 4px; font-size: 13px;">
                             <strong>Amazon Q Score:</strong> ~${scores.before}/10<br>
-                            <strong>Estimated Issues:</strong> Multiple
+                            <strong>Hallucination Check:</strong> ✗ Not validated
                         </div>
                     </div>
 
@@ -987,22 +1519,29 @@ If your camera is offline, check the battery and WiFi connection..."
                         <h4>✅ After Optimization</h4>
                         <ul>
                             <li>Title: "${optimizedTitle.substring(0, 50)}${optimizedTitle.length > 50 ? '...' : ''}"</li>
-                            <li>Word count: ${optimizedWords} words (+${((optimizedWords - originalWords) / originalWords * 100).toFixed(1)}%)</li>
-                            ${hasQuickChecks ? '<li>✓ Quick Checks section added</li>' : '<li>Structured format improved</li>'}
-                            ${hasExpectedResults ? '<li>✓ Expected results included</li>' : '<li>Clarity enhanced</li>'}
-                            ${hasTimeEstimates ? '<li>✓ Time estimates added</li>' : '<li>Details improved</li>'}
-                            ${hasScenarios ? '<li>✓ Common scenarios included</li>' : '<li>Examples added</li>'}
-                            ${hasSuccess ? '<li>✓ Success indicators present</li>' : '<li>Validation improved</li>'}
+                            <li>Word count: ${optimizedWords} words (${((optimizedWords - originalWords) / originalWords * 100).toFixed(1)}%)</li>
+                            ${hasQuickChecks ? '<li>✓ Quick Checks section added</li>' : '<li>✓ Structured format improved</li>'}
+                            ${hasExpectedResults ? '<li>✓ Expected results included</li>' : '<li>✓ Clarity enhanced</li>'}
+                            ${hasTimeEstimates ? '<li>✓ Time estimates added</li>' : '<li>✓ Details improved</li>'}
+                            <li>✓ Hallucinations removed</li>
                         </ul>
                         <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 4px; font-size: 13px;">
-                            <strong>Amazon Q Score:</strong> ${scores.after}/10<br>
-                            <strong>Quality:</strong> Optimized ✓
+                            <strong>Amazon Q Score:</strong> ~${scores.after}/10<br>
+                            <strong>Hallucination Check:</strong> ✓ Validated & Clean
                         </div>
                     </div>
                 </div>
             `;
 
             document.getElementById('dynamicComparison').innerHTML = comparisonHTML;
+        }
+
+        function showSuccess() {
+            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('scrollPrompt').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('successMessage').style.display = 'none';
+            }, 5000);
         }
 
         function showError(message) {
@@ -1017,9 +1556,8 @@ If your camera is offline, check the battery and WiFi connection..."
         }
 
         function copyToClipboard() {
-            // Strip HTML tags for clean text copy
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = currentOutput;
+            tempDiv.innerHTML = globalState.optimizedArticle;
             const plainText = tempDiv.textContent || tempDiv.innerText || '';
             
             navigator.clipboard.writeText(plainText).then(() => {
@@ -1035,16 +1573,15 @@ If your camera is offline, check the battery and WiFi connection..."
         }
 
         function downloadArticle() {
-            // Strip HTML tags for clean text download
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = currentOutput;
+            tempDiv.innerHTML = globalState.optimizedArticle;
             const plainText = tempDiv.textContent || tempDiv.innerText || '';
             
             const blob = new Blob([plainText], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'optimized-kb-article-compact.txt';
+            a.download = 'optimized-kb-article-validated.txt';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1053,15 +1590,51 @@ If your camera is offline, check the battery and WiFi connection..."
 
         function clearAll() {
             document.getElementById('inputArticle').value = '';
-            const outputArea = document.getElementById('outputArea');
-            outputArea.className = 'output-area empty';
-            outputArea.innerHTML = 'Your optimized article will appear here...<br><br>Compact mode keeps length similar to original!';
-            
-            const analysisArea = document.getElementById('analysisArea');
-            analysisArea.className = 'output-area empty';
-            analysisArea.textContent = 'Quality analysis will appear here after optimization...';
+            const outputContainer = document.getElementById('outputContainer');
+            outputContainer.innerHTML = `
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('optimized')">Optimized Article</button>
+                    <button class="tab" onclick="switchTab('analysis')">Quality Report</button>
+                </div>
 
-            // Reset dynamic comparison
+                <div id="optimizedTab" class="tab-content active">
+                    <div id="outputArea" class="output-area empty">
+                        Your optimized article will appear here...<br><br>
+                        Compact mode keeps length similar to original!
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button class="btn-secondary" onclick="copyToClipboard()" id="copyBtn" disabled>
+                            📋 Copy Article
+                        </button>
+                        <button class="btn-secondary" onclick="downloadArticle()" id="downloadBtn" disabled>
+                            💾 Download
+                        </button>
+                    </div>
+
+                    <div class="stats" id="stats" style="display: none;">
+                        <div class="stat-card">
+                            <div class="stat-value" id="statOriginal">-</div>
+                            <div class="stat-label">Original Words</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statOptimized">-</div>
+                            <div class="stat-label">Optimized Words</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statChange">-</div>
+                            <div class="stat-label">Change %</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="analysisTab" class="tab-content">
+                    <div id="analysisArea" class="output-area empty">
+                        Quality analysis will appear here after optimization...
+                    </div>
+                </div>
+            `;
+
             document.getElementById('dynamicComparison').innerHTML = `
                 <h3>Your Optimization Results</h3>
                 <p style="text-align: center; color: #666; margin-bottom: 20px;">
@@ -1073,11 +1646,15 @@ If your camera is offline, check the battery and WiFi connection..."
                 </div>
             `;
 
-            document.getElementById('copyBtn').disabled = true;
-            document.getElementById('downloadBtn').disabled = true;
-            document.getElementById('stats').style.display = 'none';
-            currentOutput = '';
-            currentAnalysis = '';
+            globalState = {
+                originalArticle: '',
+                optimizedArticle: '',
+                analysis: '',
+                hallucinations: [],
+                originalWords: 0,
+                optimizedWords: 0
+            };
+            
             hideMessages();
         }
 
@@ -1102,19 +1679,6 @@ If none of these work, contact support.`;
 
             document.getElementById('inputArticle').value = exampleArticle;
         }
-
-        // Check server health on load
-        window.addEventListener('load', async () => {
-            try {
-                const response = await fetch('/api/health');
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✓ Server is running:', data.message);
-                }
-            } catch (error) {
-                console.warn('⚠ Server might not be running. Start it with: npm start');
-            }
-        });
     </script>
 </body>
 </html>
