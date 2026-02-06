@@ -1338,7 +1338,11 @@ If your camera is offline, check the battery and WiFi connection..."
         }
 
         async function generateFinalArticle() {
+            console.log('=== GENERATE FINAL ARTICLE CALLED ===');
+            console.log('Hallucinations:', globalState.hallucinations);
+            
             const pendingIssues = globalState.hallucinations.filter(h => h.status === 'pending');
+            console.log('Pending issues:', pendingIssues.length);
             
             if (pendingIssues.length > 0) {
                 const pendingNumbers = pendingIssues.map(issue => {
@@ -1363,10 +1367,6 @@ If your camera is offline, check the battery and WiFi connection..."
                 return;
             }
 
-            const outputArea = document.getElementById('outputArea');
-            outputArea.className = 'output-area';
-            outputArea.textContent = 'Generating final article with your edits...\n\nApplying your Keep/Edit/Remove decisions...\nCreating validated output...';
-
             const outputContainer = document.getElementById('outputContainer');
             outputContainer.innerHTML = `
                 <div class="output-area">
@@ -1380,35 +1380,67 @@ If your camera is offline, check the battery and WiFi connection..."
                 const keptIssues = globalState.hallucinations.filter(h => h.status === 'accepted' || h.status === 'edited');
                 const removedIssues = globalState.hallucinations.filter(h => h.status === 'rejected');
                 
+                console.log('Kept issues:', keptIssues.length);
+                console.log('Removed issues:', removedIssues.length);
+                
+                const requestBody = {
+                    article: globalState.originalArticle,
+                    mode: 'finalize',
+                    userEdits: {
+                        originalArticle: globalState.originalArticle,
+                        optimizedArticle: globalState.optimizedArticle,
+                        keptIssues: keptIssues,
+                        removedIssues: removedIssues
+                    }
+                };
+                
+                console.log('Sending finalize request...');
+                
                 const response = await fetch('/api/optimize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        article: globalState.originalArticle,
-                        mode: 'finalize',
-                        userEdits: {
-                            originalArticle: globalState.originalArticle,
-                            optimizedArticle: globalState.optimizedArticle,
-                            keptIssues: keptIssues,
-                            removedIssues: removedIssues
-                        }
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
+                console.log('Response status:', response.status);
+
                 if (!response.ok) {
-                    throw new Error('Failed to generate final article');
+                    const errorData = await response.json();
+                    console.error('API error:', errorData);
+                    throw new Error(errorData.error || 'Failed to generate final article');
                 }
 
                 const data = await response.json();
+                console.log('Response received:', data.success);
+                
+                if (!data.finalArticle) {
+                    console.error('No finalArticle in response!');
+                    throw new Error('API did not return finalArticle');
+                }
+                
                 globalState.optimizedArticle = data.finalArticle;
+                
+                // Recalculate word count from final article
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = globalState.optimizedArticle;
+                const plainText = tempDiv.textContent || tempDiv.innerText || '';
+                globalState.optimizedWords = plainText.split(/\s+/).filter(w => w.length > 0).length;
+                
+                console.log('Final article received, displaying result...');
                 
                 displayFinalResult();
 
             } catch (error) {
+                console.error('=== ERROR IN GENERATE FINAL ===');
+                console.error('Error:', error);
+                
                 outputContainer.innerHTML = `
                     <div class="output-area">
-                        <strong>Error:</strong> ${error.message}<br><br>
-                        Please try again.
+                        <strong>❌ Error:</strong> ${error.message}<br><br>
+                        Please check the browser console (F12) for details.<br><br>
+                        <button class="btn-primary" onclick="generateFinalArticle()" style="margin-top: 15px;">
+                            🔄 Try Again
+                        </button>
                     </div>
                 `;
                 showError(error.message);
@@ -1679,6 +1711,25 @@ If none of these work, contact support.`;
 
             document.getElementById('inputArticle').value = exampleArticle;
         }
+
+        // Expose functions to window for onclick handlers
+        window.acceptIssue = acceptIssue;
+        window.rejectIssue = rejectIssue;
+        window.editIssue = editIssue;
+        window.saveEdit = saveEdit;
+        window.cancelEdit = cancelEdit;
+        window.updateIssueText = updateIssueText;
+        window.acceptAll = acceptAll;
+        window.rejectAll = rejectAll;
+        window.generateFinalArticle = generateFinalArticle;
+        window.switchTab = switchTab;
+        window.optimizeArticle = optimizeArticle;
+        window.clearAll = clearAll;
+        window.loadExample = loadExample;
+        window.copyToClipboard = copyToClipboard;
+        window.downloadArticle = downloadArticle;
+        window.toggleDetails = toggleDetails;
+        window.scrollToComparison = scrollToComparison;
     </script>
 </body>
 </html>
