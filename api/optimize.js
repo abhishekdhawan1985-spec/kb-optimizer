@@ -1,14 +1,14 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
   
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
   
   if (req.method !== 'POST') {
@@ -18,7 +18,6 @@ export default async function handler(req, res) {
   try {
     const { article, mode, userEdits } = req.body;
     
-    // Validate input
     if (!article || article.trim().length === 0) {
       return res.status(400).json({ error: 'Please provide an article to optimize' });
     }
@@ -27,11 +26,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY not found in environment variables');
-      return res.status(500).json({ 
-        error: 'API key not configured',
-        details: 'Please set ANTHROPIC_API_KEY in Vercel environment variables and redeploy'
-      });
+      return res.status(500).json({ error: 'API key not configured. Please set ANTHROPIC_API_KEY in Vercel environment variables.' });
     }
 
     const anthropic = new Anthropic({ apiKey });
@@ -43,109 +38,35 @@ export default async function handler(req, res) {
     if (!mode || mode === 'optimize') {
       console.log('Starting optimization + validation...');
 
-      // Step 1: Optimize with EXPLICIT Amazon Q rules from AWS blog
-      const optimizationPrompt = `You are a KB article optimizer for Amazon Q in Connect. Keep article compact (±20% length).
+      // Step 1: Optimize with anti-hallucination rules
+      const optimizationPrompt = `You are a KB article optimizer for Amazon Q. Keep article compact (±20% length).
 
-🎯 PRIMARY OBJECTIVE:
-Transform this KB article using the 15 optimization techniques from AWS's Amazon Q best practices, while maintaining ±20% original length.
-
-⚠️ CRITICAL ANTI-HALLUCINATION RULES - NEVER VIOLATE:
+CRITICAL RULES - NEVER VIOLATE:
 - ONLY use information explicitly stated in the original article
-- DO NOT add details, examples, statistics, specifications, or facts not in the source
-- DO NOT assume, infer, or fabricate any information
-- If the original lacks detail, keep it brief - don't make things up
-- Every fact must be traceable to the original article
+- DO NOT add details, examples, statistics, or specifications not in the source
+- DO NOT assume or infer information
+- Reorganize and clarify existing content ONLY
+- If the original lacks detail, keep it brief - don't fabricate
+- Use question-format title
+- Add clear structure with headings
+- Make text more specific and actionable (but only from existing info)
+- Remove redundancy
 
-📋 APPLY THESE 15 AMAZON Q OPTIMIZATION TECHNIQUES:
-
-1. QUESTION-FOCUSED TITLE
-   - Convert title to customer question format
-   - Example: "Camera Offline" → "Why Is My Camera Showing Offline in the App?"
-   - Must match how customers search
-
-2. FRONT-LOAD KEY INFORMATION
-   - Start with 2-3 sentence problem description
-   - State what issue this solves upfront
-   - Help Amazon Q quickly identify relevance
-
-3. CLEAR HIERARCHICAL STRUCTURE
-   - Use ## for main sections
-   - Use ### for subsections
-   - Logical flow: Problem → Quick Checks → Steps → Resolution
-
-4. SPECIFIC, ACTIONABLE LANGUAGE
-   - Replace vague terms with specific instructions
-   - "Check settings" → "Open app > Settings > Recording > verify enabled"
-   - No ambiguous language
-
-5. ACTIVE VOICE & COMMANDS
-   - Use imperative verbs
-   - "You should check" → "Check..."
-   - Direct instructions, not suggestions
-
-6. NO HEDGING LANGUAGE
-   - Remove: "might", "could", "possibly", "try", "maybe"
-   - "This might help" → "This resolves the issue"
-   - Confident, definitive statements (when info is in original)
-
-7. DEFINE TECHNICAL TERMS
-   - First use of technical terms: add brief explanation
-   - Only if term exists in original
-
-8. QUICK CHECKS SECTION (if applicable)
-   - 3-4 rapid validation steps
-   - Each takes ~30 seconds
-   - Label as "Quick Checks (30 seconds each)"
-
-9. EXPECTED RESULTS
-   - After each step, state what should happen
-   - "Expected: Camera shows 'Online' status"
-   - Helps users validate success
-
-10. TIME ESTIMATES
-    - Generic estimates only (don't fabricate specific times)
-    - "This takes a few minutes" is OK
-    - "This takes exactly 3 minutes 27 seconds" is NOT OK
-
-11. SUCCESS VALIDATION CRITERIA
-    - Clear "how to know it worked" statement
-    - End with validation step
-
-12. COMMON SCENARIO SHORTCUTS
-    - If original mentions scenarios, organize them
-    - Don't invent new scenarios
-
-13. REMOVE REDUNDANCY
-    - Consolidate repeated information
-    - One clear statement per fact
-
-14. CONCISE NAVIGATION PATHS
-    - Specific menu paths when in original
-    - Settings > Device > Camera (not "go to settings area")
-
-15. MAINTAIN COMPACT LENGTH
-    - Target ±20% of original word count
-    - More concise, not more verbose
-
-FORMAT YOUR RESPONSE:
-- Use ## for main headers (h2)
-- Use ### for subheaders (h3)
+FORMAT YOUR RESPONSE WITH PROPER SPACING:
+- Use ## for main headers
+- Use ### for subheaders
 - Separate paragraphs with blank lines
-- Use numbered lists for sequential steps
-- Use bullet points for non-sequential items
+- Use numbered lists for steps
+- Use bullet points for items
 
-After the article, add:
----ANALYSIS---
-Original word count: [X]
-Optimized word count: [Y]
-Change: [Z]%
-Structure score (1-10): [score]
-Clarity score (1-10): [score]
-Actionability score (1-10): [score]
-Overall Amazon Q optimization score (1-10): [score]
+IMPORTANT: Every fact in the optimized article must be traceable to the original article. Do not add product names, model numbers, technical specifications, timelines, or any other details not explicitly stated in the original.
 
-Now optimize this article:
-${article}`;
+Optimize this article:
+${article}
+
+Provide:
+1. Optimized article with proper formatting
+2. After "---ANALYSIS---", provide word counts and scores (1-10)`;
 
       const optimizationResponse = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -191,42 +112,35 @@ ${article}`;
 Identify any FACTUAL information in the OPTIMIZED article that is NOT present in the ORIGINAL article.
 
 WHAT COUNTS AS HALLUCINATION:
-❌ New statistics or numbers not in original (e.g., "below 15%" when original says "low")
-❌ Added product features, specifications, or model names not mentioned
-❌ New troubleshooting steps or solutions not in original
-❌ Made-up error codes, technical details, or requirements
-❌ Fabricated specific timelines (e.g., "30 seconds" when original says "brief")
-❌ Assumed causes not mentioned (e.g., "2.4GHz WiFi" when original says "WiFi")
-❌ New examples with specific details not in source
+❌ New statistics or numbers not in original
+❌ Added product features, specifications, or model names
+❌ New troubleshooting steps or solutions
+❌ Made-up error codes or technical details
+❌ Fabricated timelines or durations (unless generic like "a few minutes")
+❌ Assumed causes not mentioned in original
+❌ New examples with specific details
 
 WHAT DOES NOT COUNT AS HALLUCINATION:
-✅ Reorganized structure (headers, sections, reordering)
+✅ Reorganized structure (headers, sections)
 ✅ Clearer phrasing of existing information
-✅ Generic language ("a few minutes", "briefly", "quickly")
-✅ Standard troubleshooting verbs ("restart", "check", "verify")
-✅ Formatting improvements (bold, lists, spacing)
-✅ Question-format title derived from original title
-✅ Adding section headers for organization
+✅ Generic time estimates without specific numbers
+✅ Standard troubleshooting language ("restart", "check connection")
+✅ Formatting improvements
 
 FORMAT YOUR RESPONSE EXACTLY AS SHOWN:
 
 ## ✅ FACTUAL ACCURACY
-[Brief assessment - 1-2 sentences about overall accuracy]
+[Brief assessment - 1-2 sentences]
 
 ## 🚨 POTENTIAL HALLUCINATIONS
-[List each potential hallucination as a bullet point with location and reason]
-Format: "In [location], article adds '[specific text]' but original [what original actually says]"
-
-Examples:
-- "In Quick Checks section, article specifies 'battery level below 15%' but original only mentions 'low battery'"
-- "In WiFi requirements, article states '2.4GHz network' but original just says 'WiFi connection'"
-- "In Step 3, article mentions 'hold reset button for 30 seconds' but original says 'hold briefly'"
+[List each potential hallucination as a bullet point with location]
+- "In Step 3, article adds '2.4GHz WiFi' but original doesn't specify frequency"
+- "Quick Checks section mentions 'battery level below 15%' but original says 'low battery'"
 
 If NONE detected, write: "None detected - all facts traced to original article"
 
 ## 📊 HALLUCINATION SCORE
 Score: [X]/10
-(0 = zero issues, 10 = many fabricated facts)
 
 ## 🔍 RECOMMENDATION
 [Choose ONE: APPROVE / REVIEW NEEDED / REJECT]
@@ -270,7 +184,7 @@ ${optimizedArticle}`;
 
       return res.status(200).json({
         success: true,
-        optimizedArticle: optimizedArticle,
+        optimizedArticle: optimizedArticle,  // Changed from optimizedContent to optimizedArticle
         analysis,
         validation: {
           score: hallucinationScore,
@@ -291,8 +205,18 @@ ${optimizedArticle}`;
       }
 
       const { originalArticle, optimizedArticle, keptIssues, removedIssues } = userEdits;
+      
+      // Validate required fields
+      if (!originalArticle || !optimizedArticle) {
+        return res.status(400).json({ 
+          error: 'Missing required fields in userEdits',
+          details: 'originalArticle and optimizedArticle are required'
+        });
+      }
 
       console.log('Generating final article with user edits...');
+      console.log('Kept issues:', keptIssues ? keptIssues.length : 0);
+      console.log('Removed issues:', removedIssues ? removedIssues.length : 0);
 
       let instructions = `You are editing a KB article based on user feedback about potential hallucinations.
 
@@ -306,7 +230,7 @@ USER FEEDBACK:
 `;
 
       if (removedIssues && removedIssues.length > 0) {
-        instructions += `\n❌ REMOVE these items (user confirmed they are hallucinations):\n`;
+        instructions += `\n❌ REMOVE these items (they are hallucinations):\n`;
         removedIssues.forEach(issue => {
           instructions += `- "${issue.text}"\n`;
         });
@@ -328,9 +252,18 @@ USER FEEDBACK:
 2. Removing the items marked for removal completely
 3. Updating items with user's edited text exactly as provided
 4. Keeping everything else as-is
-5. Maintaining the same HTML formatting and structure
+5. Maintaining the EXACT same HTML formatting and structure
 
-Return ONLY the final article HTML, nothing else.`;
+CRITICAL FORMATTING RULES:
+- Return ONLY the HTML content, nothing else
+- Do NOT add markdown code blocks (no \`\`\`html or \`\`\`)
+- Do NOT add any explanatory text before or after the HTML
+- Do NOT modify the HTML structure
+- Keep all <h2>, <h3>, <p>, <strong>, <em>, <br> tags exactly as they are
+- Keep all inline styles exactly as they are
+- Preserve all spacing and line breaks
+
+Return the HTML directly starting with the first tag:`;
 
       const finalResponse = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -341,9 +274,15 @@ Return ONLY the final article HTML, nothing else.`;
         }]
       });
 
-      const finalArticle = finalResponse.content[0].text;
+      let finalArticle = finalResponse.content[0].text;
+      
+      // Clean up any markdown wrappers that Claude might add
+      finalArticle = finalArticle.replace(/^```html\n?/i, '').replace(/\n?```$/i, '');
+      finalArticle = finalArticle.trim();
 
       console.log('Final article generated successfully');
+      console.log('Final article length:', finalArticle.length);
+      console.log('Final article starts with:', finalArticle.substring(0, 100));
 
       return res.status(200).json({
         success: true,
