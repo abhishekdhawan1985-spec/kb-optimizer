@@ -38,35 +38,113 @@ export default async function handler(req, res) {
     if (!mode || mode === 'optimize') {
       console.log('Starting optimization + validation...');
 
-      // Step 1: Optimize with anti-hallucination rules
-      const optimizationPrompt = `You are a KB article optimizer for Amazon Q. Keep article compact (±20% length).
+      // Step 1: Optimize with EXPLICIT Amazon Q rules from AWS blog + anti-hallucination
+      const optimizationPrompt = `You are a KB article optimizer for Amazon Q in Connect. Keep article compact (±20% length).
 
-CRITICAL RULES - NEVER VIOLATE:
+🎯 PRIMARY OBJECTIVE:
+Transform this KB article using the 15 optimization techniques from AWS's Amazon Q best practices, while maintaining ±20% original length.
+
+⚠️ CRITICAL ANTI-HALLUCINATION RULES - NEVER VIOLATE:
 - ONLY use information explicitly stated in the original article
-- DO NOT add details, examples, statistics, or specifications not in the source
-- DO NOT assume or infer information
-- Reorganize and clarify existing content ONLY
-- If the original lacks detail, keep it brief - don't fabricate
-- Use question-format title
-- Add clear structure with headings
-- Make text more specific and actionable (but only from existing info)
-- Remove redundancy
+- DO NOT add details, examples, statistics, specifications, or facts not in the source
+- DO NOT assume, infer, or fabricate any information
+- If the original lacks detail, keep it brief - don't make things up
+- Every fact must be traceable to the original article
+- No product names, model numbers, or specs unless in original
+- No specific timelines or numbers unless in original
+
+📋 APPLY THESE 15 AMAZON Q OPTIMIZATION TECHNIQUES:
+
+1. QUESTION-FOCUSED TITLE
+   - Convert title to customer question format
+   - Example: "Camera Offline" → "Why Is My Camera Showing Offline in the App?"
+   - Must match how customers search
+
+2. FRONT-LOAD KEY INFORMATION
+   - Start with 2-3 sentence problem description
+   - State what issue this solves upfront
+   - Help Amazon Q quickly identify relevance
+
+3. CLEAR HIERARCHICAL STRUCTURE
+   - Use ## for main sections
+   - Use ### for subsections
+   - Logical flow: Problem → Quick Checks → Steps → Resolution
+
+4. SPECIFIC, ACTIONABLE LANGUAGE
+   - Replace vague terms with specific instructions (only from original info)
+   - "Check settings" → "Open app > Settings > Recording > verify enabled"
+   - No ambiguous language
+
+5. ACTIVE VOICE & COMMANDS
+   - Use imperative verbs
+   - "You should check" → "Check..."
+   - Direct instructions, not suggestions
+
+6. NO HEDGING LANGUAGE
+   - Remove: "might", "could", "possibly", "try", "maybe"
+   - "This might help" → "This resolves the issue"
+   - Confident, definitive statements (when info is in original)
+
+7. DEFINE TECHNICAL TERMS
+   - First use of technical terms: add brief explanation
+   - Only if term exists in original
+
+8. QUICK CHECKS SECTION (if applicable)
+   - 3-4 rapid validation steps
+   - Each takes ~30 seconds
+   - Label as "Quick Checks (30 seconds each)"
+   - Only if original has quick steps
+
+9. EXPECTED RESULTS
+   - After each step, state what should happen
+   - "Expected: Camera shows 'Online' status"
+   - Helps users validate success
+
+10. TIME ESTIMATES
+    - Generic estimates only (don't fabricate specific times)
+    - "This takes a few minutes" is OK
+    - "This takes exactly 3 minutes 27 seconds" is NOT OK
+    - Only if reasonable to infer
+
+11. SUCCESS VALIDATION CRITERIA
+    - Clear "how to know it worked" statement
+    - End with validation step
+
+12. COMMON SCENARIO SHORTCUTS
+    - If original mentions scenarios, organize them
+    - Don't invent new scenarios
+
+13. REMOVE REDUNDANCY
+    - Consolidate repeated information
+    - One clear statement per fact
+
+14. CONCISE NAVIGATION PATHS
+    - Specific menu paths when in original
+    - Settings > Device > Camera (not "go to settings area")
+
+15. MAINTAIN COMPACT LENGTH
+    - Target ±20% of original word count
+    - More concise, not more verbose
 
 FORMAT YOUR RESPONSE WITH PROPER SPACING:
-- Use ## for main headers
-- Use ### for subheaders
+- Use ## for main headers (h2)
+- Use ### for subheaders (h3)
 - Separate paragraphs with blank lines
-- Use numbered lists for steps
-- Use bullet points for items
-
-IMPORTANT: Every fact in the optimized article must be traceable to the original article. Do not add product names, model numbers, technical specifications, timelines, or any other details not explicitly stated in the original.
+- Use numbered lists for sequential steps
+- Use bullet points for non-sequential items
 
 Optimize this article:
 ${article}
 
-Provide:
-1. Optimized article with proper formatting
-2. After "---ANALYSIS---", provide word counts and scores (1-10)`;
+After the article, add:
+---ANALYSIS---
+Original word count: [X]
+Optimized word count: [Y]
+Change: [Z]%
+Structure score (1-10): [score]
+Clarity score (1-10): [score]
+Actionability score (1-10): [score]
+Overall Amazon Q optimization score (1-10): [score]`;
 
       const optimizationResponse = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -112,22 +190,55 @@ Provide:
 Identify any FACTUAL information in the OPTIMIZED article that is NOT present in the ORIGINAL article.
 
 WHAT COUNTS AS HALLUCINATION:
-❌ New statistics or numbers not in original
-❌ Added product features, specifications, or model names
-❌ New troubleshooting steps or solutions
-❌ Made-up error codes or technical details
-❌ Fabricated timelines or durations (unless generic like "a few minutes")
-❌ Assumed causes not mentioned in original
-❌ New examples with specific details
+❌ New statistics or numbers not in original (e.g., "below 15%" when original says "low")
+❌ Added product features, specifications, or model names not mentioned
+❌ New troubleshooting steps or solutions not in original
+❌ Made-up error codes, technical details, or requirements
+❌ Fabricated specific timelines (e.g., "30 seconds" when original says "briefly")
+❌ Assumed causes not mentioned (e.g., "2.4GHz WiFi" when original says "WiFi")
+❌ New examples with specific details not in source
 
 WHAT DOES NOT COUNT AS HALLUCINATION:
-✅ Reorganized structure (headers, sections)
+✅ Reorganized structure (headers, sections, reordering)
 ✅ Clearer phrasing of existing information
-✅ Generic time estimates without specific numbers
-✅ Standard troubleshooting language ("restart", "check connection")
-✅ Formatting improvements
+✅ Generic language ("a few minutes", "briefly", "quickly")
+✅ Standard troubleshooting verbs ("restart", "check", "verify")
+✅ Formatting improvements (bold, lists, spacing)
+✅ Question-format title derived from original title
+✅ Adding section headers for organization (Quick Checks, Steps, etc.)
+✅ Expected results that logically follow from steps in original
+✅ Generic time estimates like "This takes a few minutes" (when reasonable)
 
 FORMAT YOUR RESPONSE EXACTLY AS SHOWN:
+
+## ✅ FACTUAL ACCURACY
+[Brief assessment - 1-2 sentences about overall accuracy]
+
+## 🚨 POTENTIAL HALLUCINATIONS
+[List each potential hallucination as a bullet point with location and reason]
+Format: "In [location], article adds '[specific text]' but original [what original actually says]"
+
+Examples:
+- "In Quick Checks section, article specifies 'battery level below 15%' but original only mentions 'low battery'"
+- "In WiFi requirements, article states '2.4GHz network' but original just says 'WiFi connection'"
+- "In Step 3, article mentions 'hold reset button for 30 seconds' but original says 'hold briefly'"
+
+If NONE detected, write: "None detected - all facts traced to original article"
+
+## 📊 HALLUCINATION SCORE
+Score: [X]/10
+(0 = zero issues, 10 = many fabricated facts)
+
+## 🔍 RECOMMENDATION
+[Choose ONE: APPROVE / REVIEW NEEDED / REJECT]
+
+---
+ORIGINAL ARTICLE:
+${article}
+
+---
+OPTIMIZED ARTICLE:
+${optimizedArticle}`;
 
 ## ✅ FACTUAL ACCURACY
 [Brief assessment - 1-2 sentences]
