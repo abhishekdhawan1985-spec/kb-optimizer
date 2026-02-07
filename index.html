@@ -1588,16 +1588,70 @@ If your camera is offline, check the battery and WiFi connection..."
         }
 
         function copyToClipboard() {
+            // Convert HTML to formatted text with structure preserved
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = globalState.optimizedArticle;
-            const plainText = tempDiv.textContent || tempDiv.innerText || '';
             
-            navigator.clipboard.writeText(plainText).then(() => {
+            let formattedText = '';
+            
+            // Process each element to preserve structure
+            const elements = tempDiv.querySelectorAll('*');
+            elements.forEach(el => {
+                const tagName = el.tagName.toLowerCase();
+                const text = el.textContent.trim();
+                
+                // Skip empty elements
+                if (!text) return;
+                
+                // Skip if parent already processed this text
+                if (el.parentElement && el.parentElement.tagName !== 'DIV' && el.parentElement !== tempDiv) {
+                    return;
+                }
+                
+                switch(tagName) {
+                    case 'h1':
+                        formattedText += '# ' + text + '\n\n';
+                        break;
+                    case 'h2':
+                        formattedText += '## ' + text + '\n\n';
+                        break;
+                    case 'h3':
+                        formattedText += '### ' + text + '\n\n';
+                        break;
+                    case 'p':
+                        formattedText += text + '\n\n';
+                        break;
+                    case 'li':
+                        // Check if it's in an ordered or unordered list
+                        if (el.parentElement.tagName === 'OL') {
+                            const index = Array.from(el.parentElement.children).indexOf(el) + 1;
+                            formattedText += index + '. ' + text + '\n';
+                        } else {
+                            formattedText += '- ' + text + '\n';
+                        }
+                        break;
+                    case 'ol':
+                    case 'ul':
+                        // Lists are handled by their li children, just add newline after
+                        formattedText += '\n';
+                        break;
+                }
+            });
+            
+            // If no structure found, fallback to plain text
+            if (!formattedText.trim()) {
+                formattedText = tempDiv.textContent || tempDiv.innerText || '';
+            }
+            
+            // Clean up extra newlines
+            formattedText = formattedText.replace(/\n{3,}/g, '\n\n').trim();
+            
+            navigator.clipboard.writeText(formattedText).then(() => {
                 const btn = document.getElementById('copyBtn');
-                const originalText = btn.textContent;
-                btn.textContent = '✓ Copied!';
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✓ Copied with Formatting!';
                 setTimeout(() => {
-                    btn.textContent = originalText;
+                    btn.innerHTML = originalText;
                 }, 2000);
             }).catch(err => {
                 showError('Failed to copy: ' + err);
@@ -1605,19 +1659,72 @@ If your camera is offline, check the battery and WiFi connection..."
         }
 
         function downloadArticle() {
+            // Convert HTML to formatted text with structure preserved
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = globalState.optimizedArticle;
-            const plainText = tempDiv.textContent || tempDiv.innerText || '';
             
-            const blob = new Blob([plainText], { type: 'text/plain' });
+            let formattedText = '';
+            
+            // Process each top-level element
+            Array.from(tempDiv.children).forEach(el => {
+                const tagName = el.tagName.toLowerCase();
+                const text = el.textContent.trim();
+                
+                if (!text) return;
+                
+                switch(tagName) {
+                    case 'h1':
+                        formattedText += '# ' + text + '\n\n';
+                        break;
+                    case 'h2':
+                        formattedText += '## ' + text + '\n\n';
+                        break;
+                    case 'h3':
+                        formattedText += '### ' + text + '\n\n';
+                        break;
+                    case 'p':
+                        formattedText += text + '\n\n';
+                        break;
+                    case 'ol':
+                        const olItems = el.querySelectorAll('li');
+                        olItems.forEach((li, idx) => {
+                            formattedText += (idx + 1) + '. ' + li.textContent.trim() + '\n';
+                        });
+                        formattedText += '\n';
+                        break;
+                    case 'ul':
+                        const ulItems = el.querySelectorAll('li');
+                        ulItems.forEach(li => {
+                            formattedText += '- ' + li.textContent.trim() + '\n';
+                        });
+                        formattedText += '\n';
+                        break;
+                    default:
+                        formattedText += text + '\n\n';
+                }
+            });
+            
+            // Clean up extra newlines
+            formattedText = formattedText.replace(/\n{3,}/g, '\n\n').trim();
+            
+            const blob = new Blob([formattedText], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'optimized-kb-article-validated.txt';
+            a.download = 'optimized-kb-article-formatted.txt';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            
+            // Show feedback
+            const btn = document.getElementById('downloadBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✓ Downloaded!';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+            }, 2000);
+        }
         }
 
         function clearAll() {
