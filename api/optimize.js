@@ -35,34 +35,86 @@ export default async function handler(req, res) {
 
     // MODE 1: OPTIMIZE & VALIDATE
     if (!mode || mode === 'optimize') {
-      console.log('Starting optimization with AWS rules...');
+      console.log('Starting optimization...');
 
-      // OPTIMIZED: All 15 AWS rules in concise format
       const optimizationPrompt = `KB Article Optimizer for Amazon Q. Target: similar length (plus or minus 20%).
 
-CRITICAL: Only use information from the original article. Never add facts, numbers, or details not present in the source.
+CRITICAL RULES - NEVER VIOLATE:
+- Only use information from the original article
+- Never add facts, numbers, or details not in the source
+- Every sentence must end with a period
+- Use ONLY ## for main sections and ### for subsections
+- NEVER use #### (H4) headers
+- Put each numbered step on its own line
+- Separate all paragraphs with blank lines
 
 Apply these 15 Amazon Q optimization techniques:
 
-1. Question-format title (e.g., "Issue" becomes "Why Is Issue Happening?")
-2. Front-load 2-3 sentence problem description at start
-3. Clear structure: Use ## for sections, ### for subsections
-4. Specific instructions: "Check settings" becomes "Open app, tap Settings, tap Recording"
-5. Active voice commands: "Check" not "You should check"
-6. No hedging: Remove "might", "could", "possibly", "try"
+1. Question-format title: Transform title to customer question (e.g., "Camera Offline" becomes "Why Is My Camera Showing Offline?")
+2. Front-load problem: Start with 2-3 sentence problem description
+3. Clear structure: Use ## for main sections (Problem, Quick Checks, Resolution Steps, Success Validation). Use ### for subsections only when needed
+4. Specific instructions: "Check settings" becomes "Open app, tap Settings, tap Recording, verify enabled"
+5. Active voice: Use "Check" not "You should check"
+6. No hedging: Remove "might", "could", "possibly"
 7. Define technical terms on first use (only if in original)
-8. Quick Checks section: 3-4 rapid 30-second validation steps (if applicable)
-9. Expected results: State what should happen after each step
-10. Time estimates: Generic only ("a few minutes"), no specific times unless in original
-11. Success criteria: Clear "how to know it worked" at end
-12. Organize scenarios if mentioned in original
-13. Remove redundancy: One clear statement per fact
-14. Concise paths: "Settings > Device > Camera" not "go to settings"
-15. Maintain compact length: plus or minus 20% of original
+8. Quick Checks section: 3-4 rapid 30-second validation steps with "Expected:" results
+9. Expected results: After EVERY step, state "Expected:" outcome
+10. Time estimates: Generic only ("This takes a few minutes")
+11. Success Validation section: REQUIRED. Clear "Success:" statement at end showing how to verify resolution
+12. Organize scenarios if in original
+13. Remove redundancy
+14. Concise paths: "Settings > Device > Camera"
+15. Maintain compact length
 
-Format with ## headers, ### subheaders, paragraphs separated by blank lines.
+FORMATTING REQUIREMENTS (CRITICAL):
+- Use ## for major sections only: Problem, Quick Checks, Resolution Steps, Success Validation
+- Use ### only for subsections within Resolution Steps if needed
+- NEVER use ####
+- Each numbered step on separate line
+- Every sentence ends with period
+- Blank line between paragraphs
+- Format: "Expected: [what should happen]." after each step
+- Format: "Time: [estimate]." where applicable
 
-Optimize this article:
+REQUIRED SECTIONS:
+1. Question-format title (##)
+2. Problem description (paragraph)
+3. Quick Checks section (## Quick Checks) - if applicable
+4. Resolution Steps section (## Resolution Steps)
+5. Success Validation section (## Success Validation) - REQUIRED at end
+
+Example structure:
+## Why Is My Camera Not Recording?
+
+Problem: Your camera shows online but does not record video clips.
+
+## Quick Checks (30 seconds each)
+
+1. Verify camera power LED is on.
+   Expected: Solid or blinking LED.
+
+2. Check app shows camera as Online.
+   Expected: Status displays Online.
+
+## Resolution Steps
+
+### Step 1: Verify Recording Settings
+
+Open app, tap Settings, tap Recording, verify enabled.
+Expected: Recording toggle shows ON.
+Time: 1 minute.
+
+### Step 2: Check Storage
+
+View Events tab, check available storage.
+Expected: Storage shows available space.
+Time: 30 seconds.
+
+## Success Validation
+
+Success: Camera records when motion detected and clips appear in Events within 1 minute.
+
+Now optimize this article:
 ${article}
 
 After article add:
@@ -90,23 +142,87 @@ Amazon Q score: [1-10]`;
       let optimizedArticle = parts[0].trim();
       const analysis = parts[1] ? parts[1].trim() : 'Analysis not available';
 
-      // Convert markdown to HTML
-      optimizedArticle = optimizedArticle.replace(/^### (.+)$/gm, '<h3 style="margin: 20px 0 10px 0; color: #232F3E; font-size: 18px;">$1</h3>');
-      optimizedArticle = optimizedArticle.replace(/^## (.+)$/gm, '<h2 style="margin: 25px 0 15px 0; color: #232F3E; font-size: 22px; font-weight: 600;">$1</h2>');
-      optimizedArticle = optimizedArticle.replace(/^# (.+)$/gm, '<h1 style="margin: 30px 0 20px 0; color: #232F3E; font-size: 26px; font-weight: 700;">$1</h1>');
+      // IMPROVED HTML CONVERSION
+      // First, normalize line endings and clean up
+      optimizedArticle = optimizedArticle.replace(/\r\n/g, '\n');
+      optimizedArticle = optimizedArticle.replace(/\r/g, '\n');
+      
+      // Remove any H4 headers if they appear (convert to H3)
+      optimizedArticle = optimizedArticle.replace(/^#### (.+)$/gm, '### $1');
+      
+      // Convert headers in correct order (most specific first)
+      optimizedArticle = optimizedArticle.replace(/^### (.+)$/gm, '<h3 style="margin: 20px 0 10px 0; color: #232F3E; font-size: 18px; font-weight: 600;">$1</h3>');
+      optimizedArticle = optimizedArticle.replace(/^## (.+)$/gm, '<h2 style="margin: 25px 0 15px 0; color: #232F3E; font-size: 22px; font-weight: 700;">$1</h2>');
+      optimizedArticle = optimizedArticle.replace(/^# (.+)$/gm, '<h1 style="margin: 30px 0 20px 0; color: #232F3E; font-size: 26px; font-weight: 800;">$1</h1>');
+      
+      // Convert bold and italic
       optimizedArticle = optimizedArticle.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       optimizedArticle = optimizedArticle.replace(/\*(.+?)\*/g, '<em>$1</em>');
       
-      optimizedArticle = optimizedArticle.split('\n\n').map(para => {
-        if (para.trim().startsWith('<h')) return para;
-        return '<p style="margin: 10px 0; line-height: 1.6;">' + para.replace(/\n/g, '<br>') + '</p>';
-      }).join('\n');
+      // Split into blocks
+      const blocks = optimizedArticle.split('\n\n');
+      const processedBlocks = [];
       
+      for (let block of blocks) {
+        block = block.trim();
+        if (!block) continue;
+        
+        // Skip if already HTML tag
+        if (block.startsWith('<h')) {
+          processedBlocks.push(block);
+          continue;
+        }
+        
+        // Handle numbered lists (steps)
+        if (/^\d+\./.test(block)) {
+          const lines = block.split('\n');
+          const listItems = [];
+          let currentItem = '';
+          
+          for (const line of lines) {
+            if (/^\d+\./.test(line.trim())) {
+              if (currentItem) {
+                listItems.push(`<li style="margin: 10px 0;">${currentItem.trim()}</li>`);
+              }
+              currentItem = line.replace(/^\d+\.\s*/, '');
+            } else if (line.trim()) {
+              currentItem += '<br>' + line.trim();
+            }
+          }
+          if (currentItem) {
+            listItems.push(`<li style="margin: 10px 0;">${currentItem.trim()}</li>`);
+          }
+          
+          processedBlocks.push(`<ol style="margin: 15px 0; padding-left: 25px;">${listItems.join('')}</ol>`);
+          continue;
+        }
+        
+        // Handle bullet lists
+        if (/^[-•]/.test(block)) {
+          const lines = block.split('\n');
+          const listItems = lines
+            .filter(line => line.trim())
+            .map(line => line.replace(/^[-•]\s*/, '').trim())
+            .map(text => `<li style="margin: 8px 0;">${text}</li>`);
+          
+          processedBlocks.push(`<ul style="margin: 15px 0; padding-left: 25px;">${listItems.join('')}</ul>`);
+          continue;
+        }
+        
+        // Regular paragraph - preserve line breaks
+        const paragraphContent = block.replace(/\n/g, '<br>');
+        processedBlocks.push(`<p style="margin: 10px 0; line-height: 1.6;">${paragraphContent}</p>`);
+      }
+      
+      optimizedArticle = processedBlocks.join('\n');
+      
+      // Clean up empty tags
       optimizedArticle = optimizedArticle.replace(/<p[^>]*><\/p>/g, '');
       optimizedArticle = optimizedArticle.replace(/<p[^>]*>\s*<br>\s*<\/p>/g, '');
+      optimizedArticle = optimizedArticle.replace(/<li[^>]*><\/li>/g, '');
 
       // Validate for hallucinations
-      console.log('Validating for hallucinations...');
+      console.log('Validating...');
       
       const validationPrompt = `Compare ORIGINAL vs OPTIMIZED. List any NEW facts in optimized that are NOT in original.
 
@@ -119,16 +235,17 @@ WHAT COUNTS AS HALLUCINATION:
 - Assumed causes (e.g., "2.4GHz" when original says "WiFi")
 
 WHAT DOES NOT COUNT:
-- Reorganized structure, clearer phrasing, generic language, formatting
-- Question-format title, section headers, expected results from existing steps
-- Generic time estimates like "a few minutes" (when reasonable)
+- Reorganized structure, clearer phrasing, generic language
+- Question-format title, section headers, expected results
+- Generic time estimates like "a few minutes"
+- Success Validation section
 
 Format:
 ## FACTUAL ACCURACY
 [1-2 sentences]
 
 ## POTENTIAL HALLUCINATIONS
-- [List each with location]
+- [List each]
 Or: "None detected"
 
 ## HALLUCINATION SCORE
@@ -187,7 +304,7 @@ ${optimizedArticle}`;
     // MODE 2: FINALIZE
     if (mode === 'finalize') {
       if (!userEdits) {
-        return res.status(400).json({ error: 'Missing userEdits for finalize mode' });
+        return res.status(400).json({ error: 'Missing userEdits' });
       }
 
       const { originalArticle, optimizedArticle, keptIssues, removedIssues } = userEdits;
@@ -196,7 +313,7 @@ ${optimizedArticle}`;
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      console.log('Generating final article...');
+      console.log('Finalizing...');
 
       let instructions = `Edit this KB article based on user feedback.
 
@@ -207,7 +324,7 @@ USER FEEDBACK:
 `;
 
       if (removedIssues && removedIssues.length > 0) {
-        instructions += `\nREMOVE these items:\n`;
+        instructions += `\nREMOVE these items completely:\n`;
         removedIssues.forEach(issue => {
           instructions += `- "${issue.text}"\n`;
         });
@@ -223,13 +340,15 @@ USER FEEDBACK:
         }
       }
 
-      instructions += `\nGenerate final article by:
-1. Removing marked items completely
-2. Updating items with edited text exactly as provided
-3. Keeping everything else unchanged
-4. Maintaining exact HTML formatting
+      instructions += `\nGenerate final article:
+1. Remove marked items completely
+2. Update items with edited text exactly as provided
+3. Keep everything else unchanged
+4. Maintain exact HTML formatting and structure
+5. Preserve all <h2>, <h3>, <p>, <ol>, <ul>, <li>, <strong>, <br> tags
+6. Keep all inline styles
 
-Return ONLY the HTML, no markdown blocks, no explanatory text.`;
+Return ONLY the HTML content, no markdown blocks, no explanations.`;
 
       const finalResponse = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -242,11 +361,11 @@ Return ONLY the HTML, no markdown blocks, no explanatory text.`;
 
       let finalArticle = finalResponse.content[0].text;
       
-      // Strip markdown wrappers if present
+      // Strip markdown wrappers
       finalArticle = finalArticle.replace(/^```html\n?/i, '').replace(/\n?```$/i, '');
       finalArticle = finalArticle.trim();
 
-      console.log('Final article complete');
+      console.log('Finalize complete');
 
       return res.status(200).json({
         success: true,
@@ -254,7 +373,7 @@ Return ONLY the HTML, no markdown blocks, no explanatory text.`;
       });
     }
 
-    return res.status(400).json({ error: 'Invalid mode. Use "optimize" or "finalize"' });
+    return res.status(400).json({ error: 'Invalid mode' });
 
   } catch (error) {
     console.error('Error:', error.message);
