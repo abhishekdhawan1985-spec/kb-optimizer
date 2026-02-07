@@ -70,6 +70,8 @@ FORMATTING REQUIREMENTS (CRITICAL):
 - Use ## for major sections only: Problem, Quick Checks, Resolution Steps, Success Validation
 - Use ### only for subsections within Resolution Steps if needed
 - NEVER use ####
+- Use numbered lists (1. 2. 3.) for sequential steps
+- Use bullet points (- item) for non-sequential lists
 - Each numbered step on separate line
 - Every sentence ends with period
 - Blank line between paragraphs
@@ -87,6 +89,11 @@ Example structure:
 ## Why Is My Camera Not Recording?
 
 Problem: Your camera shows online but does not record video clips.
+
+Common causes:
+- Low battery or power issue
+- Storage full
+- Recording disabled in settings
 
 ## Quick Checks (30 seconds each)
 
@@ -200,12 +207,27 @@ Amazon Q score: [1-10]`;
         // Handle bullet lists
         if (/^[-•]/.test(block)) {
           const lines = block.split('\n');
-          const listItems = lines
-            .filter(line => line.trim())
-            .map(line => line.replace(/^[-•]\s*/, '').trim())
-            .map(text => `<li style="margin: 8px 0;">${text}</li>`);
+          const listItems = [];
+          let currentItem = '';
           
-          processedBlocks.push(`<ul style="margin: 15px 0; padding-left: 25px;">${listItems.join('')}</ul>`);
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (/^[-•]/.test(trimmedLine)) {
+              // Start of new bullet item
+              if (currentItem) {
+                listItems.push(`<li style="margin: 8px 0;">${currentItem.trim()}</li>`);
+              }
+              currentItem = trimmedLine.replace(/^[-•]\s*/, '');
+            } else if (trimmedLine) {
+              // Continuation of previous item
+              currentItem += '<br>' + trimmedLine;
+            }
+          }
+          if (currentItem) {
+            listItems.push(`<li style="margin: 8px 0;">${currentItem.trim()}</li>`);
+          }
+          
+          processedBlocks.push(`<ul style="margin: 15px 0; padding-left: 25px; list-style-type: disc;">${listItems.join('')}</ul>`);
           continue;
         }
         
