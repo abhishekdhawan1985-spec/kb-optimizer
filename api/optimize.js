@@ -15,60 +15,62 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   
-  console.log('=== API CALLED ===');
-  console.log('Request body:', JSON.stringify(req.body).substring(0, 200));
-  
   try {
     const { article, mode, userEdits } = req.body;
     
-    console.log('Mode:', mode);
-    console.log('Article length:', article ? article.length : 0);
-    
-    // Validate input
     if (!article || article.trim().length === 0) {
       return res.status(400).json({ error: 'Please provide an article to optimize' });
     }
 
-    // Get API key
     const apiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY not found');
       return res.status(500).json({ 
         error: 'API key not configured',
         details: 'Please set ANTHROPIC_API_KEY in Vercel environment variables'
       });
     }
 
-    console.log('API key found:', apiKey.substring(0, 10) + '...');
-    
     const anthropic = new Anthropic({ apiKey });
 
     // MODE 1: OPTIMIZE & VALIDATE
     if (!mode || mode === 'optimize') {
-      console.log('Starting optimization...');
+      console.log('Starting optimization with AWS rules...');
 
-      // SIMPLIFIED PROMPT - Testing only
-      const optimizationPrompt = `You are a KB article optimizer for Amazon Q. 
+      // OPTIMIZED: All 15 AWS rules in concise format
+      const optimizationPrompt = `KB Article Optimizer for Amazon Q. Target: similar length (plus or minus 20%).
 
-Transform this article using these rules:
-1. Use question-format title
-2. Add clear structure with headers
-3. Make content specific and actionable
-4. Use active voice
-5. Remove redundancy
-6. Keep it compact (similar length to original)
+CRITICAL: Only use information from the original article. Never add facts, numbers, or details not present in the source.
 
-CRITICAL: Only use information from the original article. Do not add facts.
+Apply these 15 Amazon Q optimization techniques:
+
+1. Question-format title (e.g., "Issue" becomes "Why Is Issue Happening?")
+2. Front-load 2-3 sentence problem description at start
+3. Clear structure: Use ## for sections, ### for subsections
+4. Specific instructions: "Check settings" becomes "Open app, tap Settings, tap Recording"
+5. Active voice commands: "Check" not "You should check"
+6. No hedging: Remove "might", "could", "possibly", "try"
+7. Define technical terms on first use (only if in original)
+8. Quick Checks section: 3-4 rapid 30-second validation steps (if applicable)
+9. Expected results: State what should happen after each step
+10. Time estimates: Generic only ("a few minutes"), no specific times unless in original
+11. Success criteria: Clear "how to know it worked" at end
+12. Organize scenarios if mentioned in original
+13. Remove redundancy: One clear statement per fact
+14. Concise paths: "Settings > Device > Camera" not "go to settings"
+15. Maintain compact length: plus or minus 20% of original
+
+Format with ## headers, ### subheaders, paragraphs separated by blank lines.
 
 Optimize this article:
 ${article}
 
-After the article, add:
+After article add:
 ---ANALYSIS---
-Word counts and scores`;
-
-      console.log('Calling Claude API...');
+Original words: [X]
+Optimized words: [Y]
+Change: [Z]%
+Amazon Q score: [1-10]`;
 
       const optimizationResponse = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -78,8 +80,6 @@ Word counts and scores`;
           content: optimizationPrompt
         }]
       });
-
-      console.log('Optimization complete');
 
       const fullResponse = optimizationResponse.content
         .filter(item => item.type === 'text')
@@ -93,34 +93,56 @@ Word counts and scores`;
       // Convert markdown to HTML
       optimizedArticle = optimizedArticle.replace(/^### (.+)$/gm, '<h3 style="margin: 20px 0 10px 0; color: #232F3E; font-size: 18px;">$1</h3>');
       optimizedArticle = optimizedArticle.replace(/^## (.+)$/gm, '<h2 style="margin: 25px 0 15px 0; color: #232F3E; font-size: 22px; font-weight: 600;">$1</h2>');
+      optimizedArticle = optimizedArticle.replace(/^# (.+)$/gm, '<h1 style="margin: 30px 0 20px 0; color: #232F3E; font-size: 26px; font-weight: 700;">$1</h1>');
       optimizedArticle = optimizedArticle.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      optimizedArticle = optimizedArticle.replace(/\*(.+?)\*/g, '<em>$1</em>');
       
       optimizedArticle = optimizedArticle.split('\n\n').map(para => {
         if (para.trim().startsWith('<h')) return para;
         return '<p style="margin: 10px 0; line-height: 1.6;">' + para.replace(/\n/g, '<br>') + '</p>';
       }).join('\n');
+      
+      optimizedArticle = optimizedArticle.replace(/<p[^>]*><\/p>/g, '');
+      optimizedArticle = optimizedArticle.replace(/<p[^>]*>\s*<br>\s*<\/p>/g, '');
 
-      console.log('Validation step...');
+      // Validate for hallucinations
+      console.log('Validating for hallucinations...');
+      
+      const validationPrompt = `Compare ORIGINAL vs OPTIMIZED. List any NEW facts in optimized that are NOT in original.
 
-      // SIMPLIFIED VALIDATION
-      const validationPrompt = `Compare these two articles. List any NEW facts in the optimized version that are NOT in the original.
+WHAT COUNTS AS HALLUCINATION:
+- New statistics or numbers (e.g., "15%" when original says "low")
+- Added product features or specs not mentioned
+- New troubleshooting steps not in original
+- Made-up error codes or technical details
+- Specific timelines not in original (e.g., "30 seconds" when original says "briefly")
+- Assumed causes (e.g., "2.4GHz" when original says "WiFi")
 
-ORIGINAL:
-${article}
-
-OPTIMIZED:
-${optimizedArticle}
+WHAT DOES NOT COUNT:
+- Reorganized structure, clearer phrasing, generic language, formatting
+- Question-format title, section headers, expected results from existing steps
+- Generic time estimates like "a few minutes" (when reasonable)
 
 Format:
+## FACTUAL ACCURACY
+[1-2 sentences]
+
 ## POTENTIAL HALLUCINATIONS
-- [List any new facts or details]
-Or write: "None detected"
+- [List each with location]
+Or: "None detected"
 
 ## HALLUCINATION SCORE
 Score: [0-10]
 
 ## RECOMMENDATION
-[APPROVE or REVIEW NEEDED]`;
+[APPROVE / REVIEW NEEDED / REJECT]
+
+---
+ORIGINAL:
+${article}
+
+OPTIMIZED:
+${optimizedArticle}`;
 
       const validationResponse = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -132,7 +154,6 @@ Score: [0-10]
       });
 
       const validationReport = validationResponse.content[0].text;
-      console.log('Validation complete');
 
       const scoreMatch = validationReport.match(/Score:\s*(\d+)/i);
       const hallucinationScore = scoreMatch ? parseInt(scoreMatch[1]) : 5;
@@ -148,7 +169,7 @@ Score: [0-10]
       
       const hasHallucinations = !hallucinationsSection.toLowerCase().includes('none detected') && hallucinations.length > 0;
 
-      console.log('Sending response...');
+      console.log(`Complete. Score: ${hallucinationScore}, Hallucinations: ${hallucinations.length}`);
 
       return res.status(200).json({
         success: true,
@@ -165,8 +186,6 @@ Score: [0-10]
 
     // MODE 2: FINALIZE
     if (mode === 'finalize') {
-      console.log('Finalize mode...');
-      
       if (!userEdits) {
         return res.status(400).json({ error: 'Missing userEdits for finalize mode' });
       }
@@ -177,42 +196,57 @@ Score: [0-10]
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      let instructions = `Edit this article based on user feedback.
+      console.log('Generating final article...');
+
+      let instructions = `Edit this KB article based on user feedback.
 
 OPTIMIZED ARTICLE:
 ${optimizedArticle}
 
+USER FEEDBACK:
 `;
 
       if (removedIssues && removedIssues.length > 0) {
-        instructions += `REMOVE these items:\n`;
+        instructions += `\nREMOVE these items:\n`;
         removedIssues.forEach(issue => {
           instructions += `- "${issue.text}"\n`;
         });
       }
 
       if (keptIssues && keptIssues.length > 0) {
-        const editedIssues = keptIssues.filter(issue => issue.editedText !== issue.text);
+        const editedIssues = keptIssues.filter(issue => issue.editedText !== issue.text || issue.status === 'edited');
         if (editedIssues.length > 0) {
-          instructions += `\nUPDATE these:\n`;
+          instructions += `\nUPDATE these items:\n`;
           editedIssues.forEach(issue => {
             instructions += `- Replace "${issue.text}" with "${issue.editedText}"\n`;
           });
         }
       }
 
-      instructions += `\nReturn only the HTML, no markdown code blocks.`;
+      instructions += `\nGenerate final article by:
+1. Removing marked items completely
+2. Updating items with edited text exactly as provided
+3. Keeping everything else unchanged
+4. Maintaining exact HTML formatting
+
+Return ONLY the HTML, no markdown blocks, no explanatory text.`;
 
       const finalResponse = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 8000,
-        messages: [{ role: 'user', content: instructions }]
+        messages: [{
+          role: 'user',
+          content: instructions
+        }]
       });
 
       let finalArticle = finalResponse.content[0].text;
-      finalArticle = finalArticle.replace(/^```html\n?/i, '').replace(/\n?```$/i, '').trim();
+      
+      // Strip markdown wrappers if present
+      finalArticle = finalArticle.replace(/^```html\n?/i, '').replace(/\n?```$/i, '');
+      finalArticle = finalArticle.trim();
 
-      console.log('Finalize complete');
+      console.log('Final article complete');
 
       return res.status(200).json({
         success: true,
@@ -220,18 +254,13 @@ ${optimizedArticle}
       });
     }
 
-    return res.status(400).json({ error: 'Invalid mode' });
+    return res.status(400).json({ error: 'Invalid mode. Use "optimize" or "finalize"' });
 
   } catch (error) {
-    console.error('=== ERROR ===');
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    
-    return res.status(500).json({ 
+    console.error('Error:', error.message);
+    res.status(500).json({ 
       error: 'Failed to optimize article',
-      message: error.message,
-      details: error.stack ? error.stack.substring(0, 500) : 'No stack trace'
+      message: error.message 
     });
   }
 }
