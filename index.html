@@ -1097,7 +1097,7 @@
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || error.message || 'Optimization failed');
+                    throw new Error(error.message || error.error || 'Optimization failed');
                 }
 
                 const data = await response.json();

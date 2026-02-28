@@ -205,7 +205,7 @@ Change: [Z]%
 Amazon Q score: [1-10]`;
 
       const optimizationResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251001',
         max_tokens: 8000,
         messages: [{
           role: 'user',
@@ -368,7 +368,7 @@ GENERATED ARTICLE:
 ${optimizedArticle}`;
 
       const validationResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251001',
         max_tokens: 2000,
         messages: [{
           role: 'user',
@@ -459,7 +459,7 @@ USER FEEDBACK:
 Return ONLY the HTML content, no markdown blocks, no explanations.`;
 
       const finalResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251001',
         max_tokens: 8000,
         messages: [{
           role: 'user',
