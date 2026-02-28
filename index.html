@@ -733,15 +733,32 @@
                     </ol>
                 </div>
 
-                <textarea 
-                    id="inputArticle" 
-                    placeholder="Paste your KB article here...
-
-Example:
-Camera Offline
-
-If your camera is offline, check the battery and WiFi connection..."
+                <textarea
+                    id="inputArticle"
+                    placeholder="Paste your KB article here... (optional if using a YouTube video below)"
+                    oninput="updateOptimizeButton()"
                 ></textarea>
+
+                <div style="margin: 16px 0 8px 0; display: flex; align-items: center; gap: 10px; color: #666;">
+                    <div style="flex: 1; height: 1px; background: #ddd;"></div>
+                    <span style="font-size: 13px; white-space: nowrap;">OR add a YouTube video</span>
+                    <div style="flex: 1; height: 1px; background: #ddd;"></div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 6px;">
+                        YouTube video URL <span style="color: #888;">(optional — video transcript will be used as source)</span>
+                    </label>
+                    <input
+                        type="url"
+                        id="youtubeUrl"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        style="width: 100%; padding: 10px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;"
+                        oninput="updateOptimizeButton()"
+                        onfocus="this.style.borderColor='#FF9900'"
+                        onblur="this.style.borderColor='#e0e0e0'"
+                    />
+                </div>
 
                 <div class="button-group">
                     <button class="btn-primary" id="optimizeBtn" onclick="optimizeArticle()">
@@ -968,7 +985,8 @@ If your camera is offline, check the battery and WiFi connection..."
             analysis: '',
             hallucinations: [],
             originalWords: 0,
-            optimizedWords: 0
+            optimizedWords: 0,
+            sourceMode: 'article'
         };
 
         function toggleDetails() {
@@ -1014,67 +1032,95 @@ If your camera is offline, check the battery and WiFi connection..."
             }
         }
 
+        function updateOptimizeButton() {
+            const hasArticle = document.getElementById('inputArticle').value.trim().length > 0;
+            const hasUrl = document.getElementById('youtubeUrl').value.trim().length > 0;
+            const btnText = document.getElementById('optimizeBtnText');
+            if (hasArticle && hasUrl) {
+                btnText.innerHTML = '✨ Combine & Optimize';
+            } else if (hasUrl) {
+                btnText.innerHTML = '▶ Generate from YouTube';
+            } else {
+                btnText.innerHTML = '✨ Optimize & Validate';
+            }
+        }
+
         async function optimizeArticle() {
             const inputText = document.getElementById('inputArticle').value.trim();
-            
-            if (!inputText) {
-                showError('Please paste an article first!');
+            const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
+
+            if (!inputText && !youtubeUrl) {
+                showError('Please paste an article or enter a YouTube URL.');
                 return;
             }
 
-            globalState.originalArticle = inputText;
-            globalState.originalWords = inputText.split(/\s+/).length;
+            if (youtubeUrl && !/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/.test(youtubeUrl)) {
+                showError('Please enter a valid YouTube URL (e.g. https://www.youtube.com/watch?v=...)');
+                return;
+            }
+
+            globalState.originalArticle = inputText || '[Generated from YouTube transcript]';
+            globalState.originalWords = inputText ? inputText.split(/\s+/).length : 0;
 
             hideMessages();
 
             const btn = document.getElementById('optimizeBtn');
             const btnText = document.getElementById('optimizeBtnText');
             btn.disabled = true;
-            btnText.innerHTML = '<span class="loading"></span> Optimizing & Validating... (30-60 seconds)';
 
             const outputArea = document.getElementById('outputArea');
             outputArea.className = 'output-area';
-            outputArea.textContent = 'Step 1/2: Optimizing article...\n\nApplying 15 optimization techniques for Amazon Q...\nMaintaining compact length (~±20%)...';
+
+            let loadingMsg;
+            if (youtubeUrl && inputText) {
+                btnText.innerHTML = '<span class="loading"></span> Combining sources... (30-60 seconds)';
+                loadingMsg = 'Fetching YouTube transcript...\n\nCombining article + video content...\nApplying 15 optimization techniques for Amazon Q...';
+            } else if (youtubeUrl) {
+                btnText.innerHTML = '<span class="loading"></span> Generating from YouTube... (30-60 seconds)';
+                loadingMsg = 'Fetching YouTube transcript...\n\nGenerating KB article from video content...\nApplying 15 optimization techniques for Amazon Q...';
+            } else {
+                btnText.innerHTML = '<span class="loading"></span> Optimizing & Validating... (30-60 seconds)';
+                loadingMsg = 'Step 1/2: Optimizing article...\n\nApplying 15 optimization techniques for Amazon Q...\nMaintaining compact length (~±20%)...';
+            }
+            outputArea.textContent = loadingMsg;
 
             try {
-                // Step 1: Optimize and Validate
                 const response = await fetch('/api/optimize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        article: inputText,
+                    body: JSON.stringify({
+                        article: inputText || undefined,
+                        youtubeUrl: youtubeUrl || undefined,
                         mode: 'optimize'
                     })
                 });
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.message || 'Optimization failed');
+                    throw new Error(error.error || error.message || 'Optimization failed');
                 }
 
                 const data = await response.json();
-                
+
                 if (!data.success) {
                     throw new Error(data.error || 'Optimization failed');
                 }
 
+                globalState.sourceMode = data.inputMode || 'article';
+                globalState.originalWords = data.sourceWords || globalState.originalWords;
                 globalState.optimizedArticle = data.optimizedArticle;
                 globalState.analysis = data.analysis;
-                globalState.optimizedWords = data.optimizedArticle.split(/\s+/).length;
+                globalState.optimizedWords = data.optimizedArticle.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
 
-                // Check if hallucinations detected
                 if (data.validation && data.validation.hallucinations && data.validation.hallucinations.length > 0) {
-                    // Map hallucinations
                     globalState.hallucinations = data.validation.hallucinations.map((text, index) => ({
                         id: index,
                         text: text,
                         status: 'pending',
                         editedText: text
                     }));
-
                     displayInteractiveEditor(data.validation.score, data.validation.recommendation);
                 } else {
-                    // No hallucinations - display final result
                     displayFinalResult();
                 }
 
@@ -1087,7 +1133,7 @@ If your camera is offline, check the battery and WiFi connection..."
                 console.error('Optimization error:', error);
             } finally {
                 btn.disabled = false;
-                btnText.innerHTML = '✨ Optimize & Validate';
+                updateOptimizeButton();
             }
         }
 
@@ -1475,11 +1521,11 @@ If your camera is offline, check the battery and WiFi connection..."
                     <div class="stats" id="stats" style="display: grid;">
                         <div class="stat-card">
                             <div class="stat-value" id="statOriginal">${globalState.originalWords}</div>
-                            <div class="stat-label">Original Words</div>
+                            <div class="stat-label">${globalState.sourceMode === 'youtube' ? 'Transcript Words' : globalState.sourceMode === 'combined' ? 'Source Words' : 'Original Words'}</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-value" id="statOptimized">${globalState.optimizedWords}</div>
-                            <div class="stat-label">Optimized Words</div>
+                            <div class="stat-label">${globalState.sourceMode === 'article' ? 'Optimized Words' : 'Generated Words'}</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-value" id="statChange">${(changePercent > 0 ? '+' : '')}${changePercent}%</div>
@@ -1526,14 +1572,26 @@ If your camera is offline, check the battery and WiFi connection..."
                                       optimizedText.toLowerCase().includes('expected:');
             const hasTimeEstimates = /\d+\s*(minute|second|hour)/i.test(optimizedText);
 
+            const sourceMode = globalState.sourceMode || 'article';
+            const beforeLabel = sourceMode === 'youtube' ? '📹 Video Transcript'
+                              : sourceMode === 'combined' ? '📄 Source Materials'
+                              : '❌ Before Optimization';
+            const afterLabel = sourceMode === 'article' ? '✅ After Optimization' : '✅ Generated KB Article';
+            const sourceWordLabel = sourceMode === 'youtube' ? 'Transcript words'
+                                  : sourceMode === 'combined' ? 'Source words'
+                                  : 'Word count';
+            const changeNote = originalWords > 0
+                ? ` (${((optimizedWords - originalWords) / originalWords * 100).toFixed(1)}% change)`
+                : '';
+
             const comparisonHTML = `
                 <h3>Your Article Transformation</h3>
                 <div class="comparison">
                     <div class="comparison-box before-box">
-                        <h4>❌ Before Optimization</h4>
+                        <h4>${beforeLabel}</h4>
                         <ul>
                             <li>Title: "${originalTitle.substring(0, 50)}${originalTitle.length > 50 ? '...' : ''}"</li>
-                            <li>Word count: ${originalWords} words</li>
+                            <li>${sourceWordLabel}: ${originalWords} words</li>
                             <li>No structured format</li>
                             <li>Missing quick solutions</li>
                             <li>Vague instructions</li>
@@ -1548,10 +1606,10 @@ If your camera is offline, check the battery and WiFi connection..."
                     <div class="comparison-arrow">→</div>
 
                     <div class="comparison-box after-box">
-                        <h4>✅ After Optimization</h4>
+                        <h4>${afterLabel}</h4>
                         <ul>
                             <li>Title: "${optimizedTitle.substring(0, 50)}${optimizedTitle.length > 50 ? '...' : ''}"</li>
-                            <li>Word count: ${optimizedWords} words (${((optimizedWords - originalWords) / originalWords * 100).toFixed(1)}%)</li>
+                            <li>Word count: ${optimizedWords} words${changeNote}</li>
                             ${hasQuickChecks ? '<li>✓ Quick Checks section added</li>' : '<li>✓ Structured format improved</li>'}
                             ${hasExpectedResults ? '<li>✓ Expected results included</li>' : '<li>✓ Clarity enhanced</li>'}
                             ${hasTimeEstimates ? '<li>✓ Time estimates added</li>' : '<li>✓ Details improved</li>'}
@@ -1790,9 +1848,12 @@ If your camera is offline, check the battery and WiFi connection..."
                 analysis: '',
                 hallucinations: [],
                 originalWords: 0,
-                optimizedWords: 0
+                optimizedWords: 0,
+                sourceMode: 'article'
             };
-            
+
+            document.getElementById('youtubeUrl').value = '';
+            updateOptimizeButton();
             hideMessages();
         }
 

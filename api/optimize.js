@@ -1,4 +1,35 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { YoutubeTranscript } = require('youtube-transcript');
+
+function extractVideoId(url) {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  if (!match) {
+    throw new Error('Invalid YouTube URL. Please use a format like https://www.youtube.com/watch?v=...');
+  }
+  return match[1];
+}
+
+async function fetchYouTubeTranscript(url) {
+  const videoId = extractVideoId(url);
+  let transcriptItems;
+  try {
+    transcriptItems = await YoutubeTranscript.fetchTranscript(videoId);
+  } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('transcript') || msg.includes('disabled') || msg.includes('no captions')) {
+      throw new Error('This video does not have a transcript. Try a video with captions enabled.');
+    }
+    throw new Error('Could not fetch video transcript: ' + err.message);
+  }
+  if (!transcriptItems || transcriptItems.length === 0) {
+    throw new Error('This video does not have a transcript. Try a video with captions enabled.');
+  }
+  const transcript = transcriptItems.map(item => item.text).join(' ');
+  if (transcript.trim().split(/\s+/).length < 50) {
+    throw new Error('Video transcript is too short to generate a meaningful KB article.');
+  }
+  return transcript;
+}
 
 export default async function handler(req, res) {
   // CORS headers
@@ -16,16 +47,21 @@ export default async function handler(req, res) {
   }
   
   try {
-    const { article, mode, userEdits } = req.body;
-    
-    if (!article || article.trim().length === 0) {
-      return res.status(400).json({ error: 'Please provide an article to optimize' });
+    const { article, mode, userEdits, youtubeUrl } = req.body;
+
+    // Skip source validation for finalize mode (it uses userEdits instead)
+    if (mode !== 'finalize') {
+      const hasArticle = article && article.trim().length > 0;
+      const hasYoutubeUrl = youtubeUrl && youtubeUrl.trim().length > 0;
+      if (!hasArticle && !hasYoutubeUrl) {
+        return res.status(400).json({ error: 'Please provide an article or a YouTube URL.' });
+      }
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    
+
     if (!apiKey) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'API key not configured',
         details: 'Please set ANTHROPIC_API_KEY in Vercel environment variables'
       });
@@ -33,14 +69,52 @@ export default async function handler(req, res) {
 
     const anthropic = new Anthropic({ apiKey });
 
+    // Determine input mode and fetch transcript if needed
+    const hasArticle = article && article.trim().length > 0;
+    const hasYoutubeUrl = youtubeUrl && youtubeUrl.trim().length > 0;
+    let inputMode = 'article';
+    let transcriptText = '';
+
+    if (hasYoutubeUrl && mode !== 'finalize') {
+      console.log('Fetching YouTube transcript...');
+      transcriptText = await fetchYouTubeTranscript(youtubeUrl);
+      inputMode = hasArticle ? 'combined' : 'youtube';
+    }
+
     // MODE 1: OPTIMIZE & VALIDATE
     if (!mode || mode === 'optimize') {
-      console.log('Starting optimization...');
+      console.log(`Starting optimization (mode: ${inputMode})...`);
 
-      const optimizationPrompt = `KB Article Optimizer for Amazon Q. Target: similar length (plus or minus 20%).
+      // Build source content block based on input mode
+      let sourceBlock;
+      let sourceWordCount;
+      if (inputMode === 'youtube') {
+        sourceBlock = `Generate a KB article based on this video transcript:\n${transcriptText}`;
+        sourceWordCount = transcriptText.trim().split(/\s+/).length;
+      } else if (inputMode === 'combined') {
+        sourceBlock = `EXISTING KB ARTICLE:\n${article}\n\nYOUTUBE VIDEO TRANSCRIPT:\n${transcriptText}`;
+        sourceWordCount = article.trim().split(/\s+/).length + transcriptText.trim().split(/\s+/).length;
+      } else {
+        sourceBlock = `Now optimize this article:\n${article}`;
+        sourceWordCount = article.trim().split(/\s+/).length;
+      }
+
+      const introLine = inputMode === 'youtube'
+        ? 'KB Article Generator for Amazon Q. You are creating a KB article from a YouTube video transcript. Target: concise, well-structured article.'
+        : inputMode === 'combined'
+          ? 'KB Article Optimizer for Amazon Q. You have BOTH an existing KB article AND a YouTube video transcript. Use both sources to produce the best possible KB article. The video may contain additional steps, context, or corrections not in the article. Target: similar length to the existing article (plus or minus 20%).'
+          : 'KB Article Optimizer for Amazon Q. Target: similar length (plus or minus 20%).';
+
+      const sourceRuleNote = inputMode === 'combined'
+        ? '- Only use information from the original article AND the video transcript'
+        : inputMode === 'youtube'
+          ? '- Only use information from the video transcript'
+          : '- Only use information from the original article';
+
+      const optimizationPrompt = `${introLine}
 
 CRITICAL RULES - NEVER VIOLATE:
-- Only use information from the original article
+${sourceRuleNote}
 - Never add facts, numbers, or details not in the source
 - Every sentence must end with a period
 - Use ONLY ## for main sections and ### for subsections
@@ -121,12 +195,11 @@ Time: 30 seconds.
 
 Success: Camera records when motion detected and clips appear in Events within 1 minute.
 
-Now optimize this article:
-${article}
+${sourceBlock}
 
 After article add:
 ---ANALYSIS---
-Original words: [X]
+Source words: [X]
 Optimized words: [Y]
 Change: [Z]%
 Amazon Q score: [1-10]`;
@@ -245,8 +318,20 @@ Amazon Q score: [1-10]`;
 
       // Validate for hallucinations
       console.log('Validating...');
-      
-      const validationPrompt = `Compare ORIGINAL vs OPTIMIZED. List any NEW facts in optimized that are NOT in original.
+
+      let sourceLabel, sourceSection;
+      if (inputMode === 'youtube') {
+        sourceLabel = 'VIDEO TRANSCRIPT';
+        sourceSection = `VIDEO TRANSCRIPT:\n${transcriptText}`;
+      } else if (inputMode === 'combined') {
+        sourceLabel = 'SOURCE MATERIALS (article + transcript)';
+        sourceSection = `ORIGINAL KB ARTICLE:\n${article}\n\nVIDEO TRANSCRIPT:\n${transcriptText}`;
+      } else {
+        sourceLabel = 'ORIGINAL ARTICLE';
+        sourceSection = `ORIGINAL:\n${article}`;
+      }
+
+      const validationPrompt = `Compare ${sourceLabel} vs GENERATED ARTICLE. List any NEW facts in the generated article that are NOT supported by the source.
 
 WHAT COUNTS AS HALLUCINATION:
 - New statistics or numbers (e.g., "15%" when original says "low")
@@ -277,10 +362,9 @@ Score: [0-10]
 [APPROVE / REVIEW NEEDED / REJECT]
 
 ---
-ORIGINAL:
-${article}
+${sourceSection}
 
-OPTIMIZED:
+GENERATED ARTICLE:
 ${optimizedArticle}`;
 
       const validationResponse = await anthropic.messages.create({
@@ -312,6 +396,8 @@ ${optimizedArticle}`;
 
       return res.status(200).json({
         success: true,
+        inputMode,
+        sourceWords: sourceWordCount,
         optimizedArticle: optimizedArticle,
         analysis,
         validation: {
@@ -329,10 +415,10 @@ ${optimizedArticle}`;
         return res.status(400).json({ error: 'Missing userEdits' });
       }
 
-      const { originalArticle, optimizedArticle, keptIssues, removedIssues } = userEdits;
-      
-      if (!originalArticle || !optimizedArticle) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      const { optimizedArticle, keptIssues, removedIssues } = userEdits;
+
+      if (!optimizedArticle) {
+        return res.status(400).json({ error: 'Missing optimizedArticle' });
       }
 
       console.log('Finalizing...');
